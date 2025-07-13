@@ -1,0 +1,21 @@
+[package]
+name = "wskdf-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+alkali = { version = "0.3", optional = true }
+anyhow = { workspace = true }
+rand = { workspace = true }
+rust-argon2 = { version = "2", optional = true }
+
+[dev-dependencies]
+hex = { workspace = true }
+
+
+[features]
+default = []
+# Use alkali (libsodium) for crypto. Usually the fastest but requires a C compiler
+alkali = ["dep:alkali"]
+# Use pure rust argon2. Slower but doesn't require a C compiler
+rust-argon2 = ["dep:rust-argon2"]

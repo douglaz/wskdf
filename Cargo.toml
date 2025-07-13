@@ -1,0 +1,21 @@
+
+[workspace]
+members = ["wskdf-cli", "wskdf-core"]
+resolver = "2"
+
+[workspace.metadata]
+edition = "2024"
+
+[workspace.dependencies]
+anyhow = { version = "1" }
+rand = "0.9"
+hex = "0.4"
+
+[profile.dev.package.alkali]
+opt-level = 3
+
+[profile.dev.package.libsodium-sys-stable]
+opt-level = 3
+
+[profile.dev.package.rust-argon2]
+opt-level = 3
