@@ -360,31 +360,33 @@ fn pretty(secs: f64) -> String {
     const MIN: f64 = 60.0;
     const H: f64 = 60.0 * MIN;
     const D: f64 = 24.0 * H;
-    const Y: f64 = 365.25 * D;
+    const Y: f64 = 365.25 * D; // calendar‐year approximation
 
-    let (value, unit, rest) = if secs < MIN {
+    // pick the main unit and how much time is left over
+    let (whole, unit, rest) = if secs < MIN {
         (secs, "s", 0.0)
     } else if secs < H {
-        (secs / MIN, "min", secs % MIN)
+        let whole = (secs / MIN).floor();
+        (whole, "min", secs - whole * MIN)
     } else if secs < D {
-        (secs / H, "h", secs % H)
+        let whole = (secs / H).floor();
+        (whole, "h", secs - whole * H)
     } else if secs < Y {
-        (secs / D, "d", secs % D)
+        let whole = (secs / D).floor();
+        (whole, "d", secs - whole * D)
     } else {
-        (secs / Y, "y", secs % Y)
+        let whole = (secs / Y).floor();
+        (whole, "y", secs - whole * Y)
     };
 
-    // second unit: pick the next smaller scale
-    let second = if unit == "y" {
-        format!(" {:.0}d", (rest / D).round())
-    } else if unit == "d" {
-        format!(" {:.0}h", (rest / H).round())
-    } else if unit == "h" {
-        format!(" {:.0}min", (rest / MIN).round())
-    } else if unit == "min" {
-        format!(" {:.0}s", rest.round())
-    } else {
-        String::new()
+    // render the next smaller unit, rounded to the nearest integer
+    let second = match unit {
+        "y" => format!(" {:.0}d", (rest / D).round()),
+        "d" => format!(" {:.0}h", (rest / H).round()),
+        "h" => format!(" {:.0}min", (rest / MIN).round()),
+        "min" => format!(" {:.0}s", rest.round()),
+        _ => String::new(),
     };
-    format!("{value:.0}{unit}{second}")
+
+    format!("{whole:.0}{unit}{second}")
 }

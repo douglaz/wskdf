@@ -152,47 +152,47 @@ Starting benchmark with 1 iterations across 16 threads...
 
 Benchmark results:
 Threads: 16
-Total time: 29.81s
+Total time: 29.27s
 Total iterations: 16
-Global average time per derivation: 1862.86ms
-Global derivations per second: 0.54
-Thread average time per derivation: 29.81s
+Global average time per derivation: 1829.63ms
+Global derivations per second: 0.55
+Thread average time per derivation: 29.27s
 Thread derivations per second: 0.03
 
 Estimated time to brute-force one preimage/key pair:
 bits │ expected time
 -----┼-------------
-   1 │          30s
-   2 │          30s
+   1 │          29s
+   2 │          29s
    3 │          30s
-   4 │          34s
-   5 │          46s
-   6 │     1min 15s
-   7 │     2min 14s
-   8 │     4min 13s
-   9 │     8min 11s
-  10 │     16min 8s
-  11 │     32min 2s
-  12 │      1h 4min
-  13 │      2h 7min
-  14 │     4h 15min
-  15 │     8h 29min
-  16 │    17h 58min
-  17 │       1d 10h
-  18 │       3d 20h
-  19 │       6d 16h
-  20 │       11d 7h
-  21 │      23d 15h
-  22 │       45d 5h
-  23 │      90d 10h
-  24 │     181d 21h
-  25 │     362d 18h
-  26 │      2y 358d
-  27 │      4y 351d
-  28 │      8y 337d
-  29 │     16y 309d
-  30 │     32y 253d
-  31 │     63y 140d
-  32 │    127y 280d
+   4 │          33s
+   5 │          45s
+   6 │     1min 13s
+   7 │     2min 11s
+   8 │      4min 8s
+   9 │      8min 2s
+  10 │    15min 51s
+  11 │    31min 27s
+  12 │      1h 3min
+  13 │      2h 5min
+  14 │     4h 10min
+  15 │     8h 20min
+  16 │    16h 39min
+  17 │        1d 9h
+  18 │       2d 19h
+  19 │       5d 13h
+  20 │       11d 2h
+  21 │       22d 5h
+  22 │      44d 10h
+  23 │      88d 20h
+  24 │     177d 15h
+  25 │      355d 7h
+  26 │      1y 345d
+  27 │      3y 325d
+  28 │      7y 285d
+  29 │     15y 206d
+  30 │      31y 46d
+  31 │      62y 92d
+  32 │    124y 185d
 ```
 ---
