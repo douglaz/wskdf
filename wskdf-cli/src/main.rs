@@ -3,7 +3,7 @@ use std::{io::Write, path::PathBuf};
 use anyhow::{Context, ensure};
 use clap::Parser;
 
-use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use wskdf_core::{KEY_SIZE, PREIMAGE_SIZE, SALT_SIZE};
 
 const DEFAULT_OPS_LIMIT: u32 = 7;
@@ -201,29 +201,31 @@ fn main() -> anyhow::Result<()> {
                 .context("failed to build rayon pool")?;
 
             eprintln!("Starting parallel search");
+            let space = 1u64 << (n_bits - 1); // 2^(n-1)
+            let start = {
+                let mut rng = rand::rngs::ThreadRng::default();
+                rand::Rng::random_range(&mut rng, 0..space)
+            };
 
             let found_preimage = pool.install(|| {
-                std::iter::repeat_with(|| {
-                    // Each task keeps its own RNG to avoid contention
-                    let mut rng = rand::rngs::ThreadRng::default();
-                    wskdf_core::core_gen_rand_preimage(n_bits, &mut rng)
-                })
-                .par_bridge() // turn the iterator into a parallel iterator
-                .find_map_any(|random_preimage| {
-                    let random_preimage_hex = hex::encode(random_preimage);
-                    eprintln!("Deriving key for {random_preimage_hex}");
+                (0..space).into_par_iter().find_map_any(|idx| {
+                    // deterministic walk starting at `start`
+                    let preimage_bytes = index_to_preimage(idx, start, n_bits);
+                    let preimage_hex = hex::encode(preimage_bytes);
+                    eprintln!("Deriving key for {preimage_hex}");
                     let derived_key = wskdf_core::wskdf_derive_key(
-                        &random_preimage,
+                        &preimage_bytes,
                         &salt,
                         kdf_params.ops_limit,
                         kdf_params.mem_limit_kbytes,
                     )
                     .expect("derive key to complete");
-                    let derived_key_hex = hex::encode(derived_key);
-                    let exit_status =
-                        exec_and_send_to_stdin(derived_key_hex.as_bytes(), command.clone());
-                    if exit_status.map(|s| s.success()).unwrap_or(false) {
-                        Some((random_preimage_hex, derived_key_hex))
+                    let key_hex = hex::encode(derived_key);
+                    if exec_and_send_to_stdin(key_hex.as_bytes(), command.clone())
+                        .map(|s| s.success())
+                        .unwrap_or(false)
+                    {
+                        Some((preimage_hex, key_hex))
                     } else {
                         None
                     }
@@ -330,14 +332,26 @@ fn main() -> anyhow::Result<()> {
 
             for bits in 1u8..=32 {
                 // space = 2^(bits-1) because MSB is always 1
-                let p_block = 1.0 - (1.0 - 2f64.powi(-(bits as i32 - 1))).powi(threads as i32);
-                let exp_secs = (1.0 / p_block) * thread_avg_time;
+                let space: f64 = 2f64.powi(bits as i32 - 1); // 2^(n-1) candidates
+                let per_thread_work = (space / (2.0 * threads as f64)).max(1.0); // ≥ 1 round
+                let exp_secs = per_thread_work * thread_avg_time;
                 let human = pretty(exp_secs);
                 eprintln!("{bits:>4} │ {human:>12}");
             }
         }
     };
     Ok(())
+}
+
+/// Return the `i`-th candidate in the n-bit space, interpreted as
+///   ((start + i) mod 2^(n-1))  with the MSB forced to 1.
+#[inline]
+fn index_to_preimage(i: u64, start: u64, n_bits: u8) -> [u8; 8] {
+    debug_assert!((1..=63).contains(&n_bits));
+    let hi_mask = 1u64 << (n_bits - 1);
+    let space = hi_mask; // 2^(n-1)
+    let value = ((start + i) & (space - 1)) | hi_mask;
+    value.to_be_bytes()
 }
 
 fn exec_and_send_to_stdin(
