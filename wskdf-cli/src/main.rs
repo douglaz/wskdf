@@ -27,7 +27,7 @@ struct Cli {
 
 #[derive(Clone, clap::Subcommand)]
 enum Commands {
-    /// Outputs a random preimage and the derived key as hex to two files
+    /// Outputs a random preimage and the derived key encoded as hex to two files
     OutputRandomKey {
         #[arg(short, long)]
         n_bits: u8,
@@ -38,8 +38,25 @@ enum Commands {
         #[arg(short, long)]
         key_output: PathBuf,
 
+        #[arg(short, long, value_parser = parse_salt)]
+        salt: [u8; SALT_SIZE],
+
+        #[clap(flatten)]
+        kdf_params: KdfParams,
+    },
+    /// Like `output_random_key`, but feeds the preimage to the external command instead of writing it to a file
+    FeedRandomKey {
         #[arg(short, long)]
-        salt: String,
+        command: String,
+
+        #[arg(short, long)]
+        n_bits: u8,
+
+        #[arg(short, long)]
+        preimage_output: PathBuf,
+
+        #[arg(short, long, value_parser = parse_salt)]
+        salt: [u8; SALT_SIZE],
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -47,13 +64,27 @@ enum Commands {
     /// Derives a key from a preimage
     DeriveKey {
         #[arg(short, long)]
-        preimage: String,
+        preimage_input: PathBuf,
 
         #[arg(short, long)]
         key_output: PathBuf,
 
+        #[arg(short, long, value_parser = parse_salt)]
+        salt: [u8; SALT_SIZE],
+
+        #[clap(flatten)]
+        kdf_params: KdfParams,
+    },
+    /// Like `derive_key`, but feeds the derived key to the external command instead of writing it to a file
+    FeedDerivedKey {
         #[arg(short, long)]
-        salt: String,
+        command: String,
+
+        #[arg(short, long)]
+        preimage_input: PathBuf,
+
+        #[arg(short, long, value_parser = parse_salt)]
+        salt: [u8; SALT_SIZE],
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -78,8 +109,8 @@ enum Commands {
         #[arg(short, long)]
         threads: usize,
 
-        #[arg(short, long)]
-        salt: String,
+        #[arg(short, long, value_parser = parse_salt)]
+        salt: [u8; SALT_SIZE],
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -87,13 +118,13 @@ enum Commands {
     /// Checks if a preimage derives to a given key. Returns exit code 0 if it does, non-zero otherwise
     CheckPreimage {
         #[arg(short, long)]
-        key: String,
+        key_input: PathBuf,
 
         #[arg(short, long)]
-        preimage: String,
+        preimage_input: PathBuf,
 
-        #[arg(short, long)]
-        salt: String,
+        #[arg(short, long, value_parser = parse_salt)]
+        salt: [u8; SALT_SIZE],
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -127,10 +158,6 @@ fn main() -> anyhow::Result<()> {
                 "preimage output file already exists"
             );
             ensure!(!key_output.exists(), "key output file already exists");
-            let salt: [u8; SALT_SIZE] = hex::decode(salt)
-                .context("salt isn't valid hex")?
-                .try_into()
-                .map_err(|k| anyhow::anyhow!("salt doesn't fit in [u8; SALT_SIZE]: {k:?}"))?;
             let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
             let preimage_hex = hex::encode(preimage);
             let key = wskdf_core::wskdf_derive_key(
@@ -141,27 +168,45 @@ fn main() -> anyhow::Result<()> {
             )
             .context("derive key failed")?;
             let key_hex = hex::encode(key);
-
             std::fs::write(preimage_output, preimage_hex)?;
             std::fs::write(key_output, key_hex)?;
         }
+        Commands::FeedRandomKey {
+            command,
+            n_bits,
+            preimage_output,
+            salt,
+            kdf_params,
+        } => {
+            ensure!(
+                !preimage_output.exists(),
+                "preimage output file already exists"
+            );
+            let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
+            let preimage_hex = hex::encode(preimage);
+            let key = wskdf_core::wskdf_derive_key(
+                &preimage,
+                &salt,
+                kdf_params.ops_limit,
+                kdf_params.mem_limit_kbytes,
+            )
+            .context("derive key failed")?;
+            let key_hex = hex::encode(key);
+            ensure!(
+                exec_and_send_to_stdin(key_hex.as_bytes(), command)?.success(),
+                "command failed",
+            );
+            std::fs::write(preimage_output, preimage_hex)?;
+        }
         Commands::DeriveKey {
-            preimage,
+            preimage_input,
             salt,
             kdf_params,
             key_output,
         } => {
             ensure!(!key_output.exists(), "key output file already exists");
-            let preimage: [u8; PREIMAGE_SIZE] = hex::decode(preimage)
-                .context("preimage isn't valid hex")?
-                .try_into()
-                .map_err(|k| {
-                    anyhow::anyhow!("preimage doesn't fit in [u8; PREIMAGE_SIZE]: {k:?}")
-                })?;
-            let salt: [u8; SALT_SIZE] = hex::decode(salt)
-                .context("salt isn't valid hex")?
-                .try_into()
-                .map_err(|k| anyhow::anyhow!("salt doesn't fit in [u8; SALT_SIZE]: {k:?}"))?;
+            let preimage = std::fs::read_to_string(preimage_input)?;
+            let preimage = parse_preimage(&preimage)?;
             let key = wskdf_core::wskdf_derive_key(
                 &preimage,
                 &salt,
@@ -171,6 +216,27 @@ fn main() -> anyhow::Result<()> {
             .context("derive key failed")?;
             let key_hex = hex::encode(key);
             std::fs::write(key_output, key_hex)?;
+        }
+        Commands::FeedDerivedKey {
+            command,
+            preimage_input,
+            salt,
+            kdf_params,
+        } => {
+            let preimage = std::fs::read_to_string(preimage_input)?;
+            let preimage = parse_preimage(&preimage)?;
+            let key = wskdf_core::wskdf_derive_key(
+                &preimage,
+                &salt,
+                kdf_params.ops_limit,
+                kdf_params.mem_limit_kbytes,
+            )
+            .context("derive key failed")?;
+            let key_hex = hex::encode(key);
+            ensure!(
+                exec_and_send_to_stdin(key_hex.as_bytes(), command)?.success(),
+                "command failed",
+            );
         }
         Commands::FindKey {
             command,
@@ -187,26 +253,21 @@ fn main() -> anyhow::Result<()> {
             );
             ensure!(threads > 0, "threads must be > 0");
             ensure!(!key_output.exists(), "key output file already exists");
-            let salt: [u8; SALT_SIZE] = hex::decode(salt)
-                .context("salt isn't valid hex")?
-                .try_into()
-                .map_err(|k| anyhow::anyhow!("salt doesn't fit in [u8; SALT_SIZE]: {k:?}"))?;
-            eprintln!("Using {threads} rayon threads");
 
+            eprintln!("Using {threads} rayon threads");
             // Build a dedicated rayon pool with the requested number of threads so that we
             // don't interfere with any global pool settings.
             let pool = rayon::ThreadPoolBuilder::new()
                 .num_threads(threads)
                 .build()
                 .context("failed to build rayon pool")?;
-
             eprintln!("Starting parallel search");
+            let now = std::time::Instant::now();
             let space = 1u64 << (n_bits - 1); // 2^(n-1)
             let start = {
                 let mut rng = rand::rngs::ThreadRng::default();
                 rand::Rng::random_range(&mut rng, 0..space)
             };
-
             let found_preimage = pool.install(|| {
                 (0..space).into_par_iter().find_map_any(|idx| {
                     // deterministic walk starting at `start`
@@ -233,32 +294,29 @@ fn main() -> anyhow::Result<()> {
             });
             match found_preimage {
                 Some((preimage_hex, derived_key_hex)) => {
+                    eprintln!("Found key in {:?}", now.elapsed());
                     std::fs::write(preimage_output, preimage_hex)?;
                     std::fs::write(key_output, derived_key_hex)?;
                 }
-                None => anyhow::bail!("Search terminated without a result"),
+                None => {
+                    eprintln!(
+                        "Search terminated without a result after {:?}",
+                        now.elapsed()
+                    );
+                    anyhow::bail!("Search terminated without a result");
+                }
             }
         }
         Commands::CheckPreimage {
-            key,
-            preimage,
+            key_input,
+            preimage_input,
             salt,
             kdf_params,
         } => {
-            let key: [u8; KEY_SIZE] = hex::decode(key)
-                .context("key isn't valid hex")?
-                .try_into()
-                .map_err(|k| anyhow::anyhow!("key doesn't fit in [u8; KEY_SIZE]: {k:?}"))?;
-            let preimage: [u8; PREIMAGE_SIZE] = hex::decode(preimage)
-                .context("preimage isn't valid hex")?
-                .try_into()
-                .map_err(|k| {
-                    anyhow::anyhow!("preimage doesn't fit in [u8; PREIMAGE_SIZE]: {k:?}")
-                })?;
-            let salt: [u8; SALT_SIZE] = hex::decode(salt)
-                .context("salt isn't valid hex")?
-                .try_into()
-                .map_err(|k| anyhow::anyhow!("salt doesn't fit in [u8; SALT_SIZE]: {k:?}"))?;
+            let key = std::fs::read_to_string(key_input)?;
+            let key = parse_key(&key)?;
+            let preimage = std::fs::read_to_string(preimage_input)?;
+            let preimage = parse_preimage(&preimage)?;
             let derived_key = wskdf_core::wskdf_derive_key(
                 &preimage,
                 &salt,
@@ -341,6 +399,30 @@ fn main() -> anyhow::Result<()> {
         }
     };
     Ok(())
+}
+
+fn parse_salt(salt: &str) -> anyhow::Result<[u8; SALT_SIZE]> {
+    let result = hex::decode(salt)
+        .context("salt isn't valid hex")?
+        .try_into()
+        .map_err(|k| anyhow::anyhow!("salt doesn't fit in [u8; SALT_SIZE]: {k:?}"))?;
+    Ok(result)
+}
+
+fn parse_preimage(preimage: &str) -> anyhow::Result<[u8; PREIMAGE_SIZE]> {
+    let preimage = hex::decode(preimage)
+        .context("preimage isn't valid hex")?
+        .try_into()
+        .map_err(|k| anyhow::anyhow!("preimage doesn't fit in [u8; PREIMAGE_SIZE]: {k:?}"))?;
+    Ok(preimage)
+}
+
+fn parse_key(key: &str) -> anyhow::Result<[u8; KEY_SIZE]> {
+    let key = hex::decode(key)
+        .context("key isn't valid hex")?
+        .try_into()
+        .map_err(|k| anyhow::anyhow!("key doesn't fit in [u8; KEY_SIZE]: {k:?}"))?;
+    Ok(key)
 }
 
 /// Return the `i`-th candidate in the n-bit space, interpreted as
