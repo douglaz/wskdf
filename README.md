@@ -25,18 +25,20 @@ Typical use‑case: encrypt a Bitcoin seed or small backup with a WSKDF key, sta
 
 ## CLI quick‑start
 
-Note: salt is a hex encoded string of 16 bytes. It's good enough to generate it once and reuse for multiple keys. You can generate with something like:
+Note: salt is a hex encoded string of 16 bytes. It's good enough to generate it once and reuse for multiple keys. You can generate with:
 ```bash
+$ cargo run -- generate-salt --output salt
+# or for instance:
 $ openssl rand -hex 16
 a228c13efadd4f6435a30d62a998d065
 ```
 
-In this examples we will use `000102030405060708090a0b0c0d0e0f` as salt.
+In these examples we will use `000102030405060708090a0b0c0d0e0f` as salt.
 
 ### Generate a 4‑bit preimage + key
 Note: for real-world usage we recommend using a larger bit-length (e.g. 20).
 ```bash
-$ cargo run --release -F alkali -- output-random-key -n 4 --preimage-output preimage --key-output key --salt 000102030405060708090a0b0c0d0e0f
+$ cargo run --release -F alkali -- output-random-key -n 4 --preimage-output preimage --key-output key --salt-input salt
 
 $ cat preimage
 000000000000000e
@@ -58,7 +60,7 @@ LICENSE.gpg: PGP symmetric key encrypted data - AES with 256-bit key salted & it
 Now suppose we lost the preimage and the key. We can recover them using the external command.
 In this example we both find the key/preimage and decrypt the file, see `scripts/gpg_decrypt.sh` for the implementation.
 ```bash
-$ INPUT_FILE=LICENSE.gpg OUTPUT_FILE=/tmp/LICENSE cargo run --release -F alkali -- find-key  --command ./scripts/gpg_decrypt.sh -t 4 -n 4 --preimage-output found-preimage --key-output found-key --salt 000102030405060708090a0b0c0d0e0f
+$ INPUT_FILE=LICENSE.gpg OUTPUT_FILE=/tmp/LICENSE cargo run --release -F alkali -- find-key  --command ./scripts/gpg_decrypt.sh -t 4 -n 4 --preimage-output found-preimage --key-output found-key --salt-input salt
 Using 4 rayon threads
 Starting parallel search
 Deriving key for 000000000000000e

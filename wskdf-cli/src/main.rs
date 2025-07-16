@@ -38,8 +38,8 @@ enum Commands {
         #[arg(short, long)]
         key_output: PathBuf,
 
-        #[arg(short, long, value_parser = parse_salt)]
-        salt: [u8; SALT_SIZE],
+        #[arg(short, long)]
+        salt_input: PathBuf,
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -55,8 +55,8 @@ enum Commands {
         #[arg(short, long)]
         preimage_output: PathBuf,
 
-        #[arg(short, long, value_parser = parse_salt)]
-        salt: [u8; SALT_SIZE],
+        #[arg(short, long)]
+        salt_input: PathBuf,
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -69,8 +69,8 @@ enum Commands {
         #[arg(short, long)]
         key_output: PathBuf,
 
-        #[arg(short, long, value_parser = parse_salt)]
-        salt: [u8; SALT_SIZE],
+        #[arg(short, long)]
+        salt_input: PathBuf,
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -83,8 +83,8 @@ enum Commands {
         #[arg(short, long)]
         preimage_input: PathBuf,
 
-        #[arg(short, long, value_parser = parse_salt)]
-        salt: [u8; SALT_SIZE],
+        #[arg(short, long)]
+        salt_input: PathBuf,
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -109,8 +109,8 @@ enum Commands {
         #[arg(short, long)]
         threads: usize,
 
-        #[arg(short, long, value_parser = parse_salt)]
-        salt: [u8; SALT_SIZE],
+        #[arg(short, long)]
+        salt_input: PathBuf,
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -123,8 +123,8 @@ enum Commands {
         #[arg(short, long)]
         preimage_input: PathBuf,
 
-        #[arg(short, long, value_parser = parse_salt)]
-        salt: [u8; SALT_SIZE],
+        #[arg(short, long)]
+        salt_input: PathBuf,
 
         #[clap(flatten)]
         kdf_params: KdfParams,
@@ -141,6 +141,10 @@ enum Commands {
         #[clap(flatten)]
         kdf_params: KdfParams,
     },
+    GenerateSalt {
+        #[arg(short, long)]
+        output: PathBuf,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -150,7 +154,7 @@ fn main() -> anyhow::Result<()> {
             n_bits,
             preimage_output,
             key_output,
-            salt,
+            salt_input,
             kdf_params,
         } => {
             ensure!(
@@ -158,6 +162,8 @@ fn main() -> anyhow::Result<()> {
                 "preimage output file already exists"
             );
             ensure!(!key_output.exists(), "key output file already exists");
+            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = parse_salt(&salt)?;
             let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
             let preimage_hex = hex::encode(preimage);
             let key = wskdf_core::wskdf_derive_key(
@@ -175,13 +181,15 @@ fn main() -> anyhow::Result<()> {
             command,
             n_bits,
             preimage_output,
-            salt,
+            salt_input,
             kdf_params,
         } => {
             ensure!(
                 !preimage_output.exists(),
                 "preimage output file already exists"
             );
+            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = parse_salt(&salt)?;
             let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
             let preimage_hex = hex::encode(preimage);
             let key = wskdf_core::wskdf_derive_key(
@@ -200,11 +208,13 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::DeriveKey {
             preimage_input,
-            salt,
+            salt_input,
             kdf_params,
             key_output,
         } => {
             ensure!(!key_output.exists(), "key output file already exists");
+            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = parse_salt(&salt)?;
             let preimage = std::fs::read_to_string(preimage_input)?;
             let preimage = parse_preimage(&preimage)?;
             let key = wskdf_core::wskdf_derive_key(
@@ -220,11 +230,13 @@ fn main() -> anyhow::Result<()> {
         Commands::FeedDerivedKey {
             command,
             preimage_input,
-            salt,
+            salt_input,
             kdf_params,
         } => {
             let preimage = std::fs::read_to_string(preimage_input)?;
             let preimage = parse_preimage(&preimage)?;
+            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = parse_salt(&salt)?;
             let key = wskdf_core::wskdf_derive_key(
                 &preimage,
                 &salt,
@@ -244,7 +256,7 @@ fn main() -> anyhow::Result<()> {
             key_output,
             n_bits,
             threads,
-            salt,
+            salt_input,
             kdf_params,
         } => {
             ensure!(
@@ -253,6 +265,8 @@ fn main() -> anyhow::Result<()> {
             );
             ensure!(threads > 0, "threads must be > 0");
             ensure!(!key_output.exists(), "key output file already exists");
+            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = parse_salt(&salt)?;
 
             eprintln!("Using {threads} rayon threads");
             // Build a dedicated rayon pool with the requested number of threads so that we
@@ -294,14 +308,14 @@ fn main() -> anyhow::Result<()> {
             });
             match found_preimage {
                 Some((preimage_hex, derived_key_hex)) => {
-                    eprintln!("Found key in {:?}", now.elapsed());
+                    eprintln!("Found key in {:?}", pretty(now.elapsed().as_secs_f64()));
                     std::fs::write(preimage_output, preimage_hex)?;
                     std::fs::write(key_output, derived_key_hex)?;
                 }
                 None => {
                     eprintln!(
                         "Search terminated without a result after {:?}",
-                        now.elapsed()
+                        pretty(now.elapsed().as_secs_f64())
                     );
                     anyhow::bail!("Search terminated without a result");
                 }
@@ -310,13 +324,15 @@ fn main() -> anyhow::Result<()> {
         Commands::CheckPreimage {
             key_input,
             preimage_input,
-            salt,
+            salt_input,
             kdf_params,
         } => {
             let key = std::fs::read_to_string(key_input)?;
             let key = parse_key(&key)?;
             let preimage = std::fs::read_to_string(preimage_input)?;
             let preimage = parse_preimage(&preimage)?;
+            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = parse_salt(&salt)?;
             let derived_key = wskdf_core::wskdf_derive_key(
                 &preimage,
                 &salt,
@@ -396,6 +412,12 @@ fn main() -> anyhow::Result<()> {
                 let human = pretty(exp_secs);
                 eprintln!("{bits:>4} │ {human:>12}");
             }
+        }
+        Commands::GenerateSalt { output } => {
+            let mut rng = rand::rngs::ThreadRng::default();
+            let salt: [u8; SALT_SIZE] = rand::Rng::random(&mut rng);
+            let salt_hex = hex::encode(salt);
+            std::fs::write(output, salt_hex)?;
         }
     };
     Ok(())

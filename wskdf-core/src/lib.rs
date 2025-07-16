@@ -11,7 +11,7 @@ pub fn gen_rand_preimage(n_bits: u8) -> anyhow::Result<[u8; PREIMAGE_SIZE]> {
 
 #[inline]
 pub fn core_gen_rand_preimage(n_bits: u8, rng: &mut rand::rngs::ThreadRng) -> [u8; PREIMAGE_SIZE] {
-    assert!(n_bits > 0 && n_bits <= 63, "n must be between 1 and 63");
+    debug_assert!((1..=63).contains(&n_bits), "n must be between 1 and 63");
     let low = 1u64 << (n_bits - 1); // inclusive lower bound
     let high = 1u64 << n_bits; // exclusive upper bound
     let result = rand::Rng::random_range(rng, low..high); // uniform in [low, high)
