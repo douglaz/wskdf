@@ -9,7 +9,7 @@ use wskdf_core::{KEY_SIZE, PREIMAGE_SIZE, SALT_SIZE};
 const DEFAULT_OPS_LIMIT: u32 = 7;
 const DEFAULT_MEM_LIMIT_KBYTES: u32 = 4096 * 1024;
 
-#[derive(Clone, clap::Args)]
+#[derive(Clone, clap::Args, serde::Serialize)]
 struct KdfParams {
     #[arg(long, default_value_t = DEFAULT_OPS_LIMIT)]
     ops_limit: u32,
@@ -32,13 +32,16 @@ enum Commands {
         #[arg(short, long)]
         n_bits: u8,
 
-        #[arg(short, long)]
+        #[arg(long)]
         preimage_output: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
         key_output: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
+        params_output: Option<PathBuf>,
+
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -52,10 +55,13 @@ enum Commands {
         #[arg(short, long)]
         n_bits: u8,
 
-        #[arg(short, long)]
+        #[arg(long)]
         preimage_output: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
+        params_output: Option<PathBuf>,
+
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -63,13 +69,13 @@ enum Commands {
     },
     /// Derives a key from a preimage
     DeriveKey {
-        #[arg(short, long)]
+        #[arg(long)]
         preimage_input: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
         key_output: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -80,10 +86,10 @@ enum Commands {
         #[arg(short, long)]
         command: String,
 
-        #[arg(short, long)]
+        #[arg(long)]
         preimage_input: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -96,11 +102,12 @@ enum Commands {
         #[arg(short, long)]
         command: String,
 
-        #[arg(short, long)]
+        #[arg(long)]
         preimage_output: PathBuf,
 
-        #[arg(short, long)]
-        key_output: PathBuf,
+        /// Key output file. If not specified, no key will be written, but it can be derived through preimage
+        #[arg(long)]
+        key_output: Option<PathBuf>,
 
         #[arg(short, long)]
         n_bits: u8,
@@ -109,7 +116,7 @@ enum Commands {
         #[arg(short, long)]
         threads: usize,
 
-        #[arg(short, long)]
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -117,13 +124,13 @@ enum Commands {
     },
     /// Checks if a preimage derives to a given key. Returns exit code 0 if it does, non-zero otherwise
     CheckPreimage {
-        #[arg(short, long)]
+        #[arg(long)]
         key_input: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
         preimage_input: PathBuf,
 
-        #[arg(short, long)]
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -147,6 +154,12 @@ enum Commands {
     },
 }
 
+#[derive(serde::Serialize)]
+struct ParamsOutput {
+    kdf_params: KdfParams,
+    n_bits: u8,
+}
+
 fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
     match args.command {
@@ -154,6 +167,7 @@ fn main() -> anyhow::Result<()> {
             n_bits,
             preimage_output,
             key_output,
+            params_output,
             salt_input,
             kdf_params,
         } => {
@@ -162,6 +176,9 @@ fn main() -> anyhow::Result<()> {
                 "preimage output file already exists"
             );
             ensure!(!key_output.exists(), "key output file already exists");
+            if let Some(params_output) = &params_output {
+                ensure!(!params_output.exists(), "params output file already exists");
+            }
             let salt = std::fs::read_to_string(salt_input)?;
             let salt = parse_salt(&salt)?;
             let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
@@ -176,6 +193,12 @@ fn main() -> anyhow::Result<()> {
             let key_hex = hex::encode(key);
             std::fs::write(preimage_output, preimage_hex)?;
             std::fs::write(key_output, key_hex)?;
+            if let Some(params_output) = &params_output {
+                std::fs::write(
+                    params_output,
+                    serde_json::to_string_pretty(&ParamsOutput { kdf_params, n_bits })?,
+                )?;
+            }
         }
         Commands::FeedRandomKey {
             command,
@@ -183,11 +206,15 @@ fn main() -> anyhow::Result<()> {
             preimage_output,
             salt_input,
             kdf_params,
+            params_output,
         } => {
             ensure!(
                 !preimage_output.exists(),
                 "preimage output file already exists"
             );
+            if let Some(params_output) = &params_output {
+                ensure!(!params_output.exists(), "params output file already exists");
+            }
             let salt = std::fs::read_to_string(salt_input)?;
             let salt = parse_salt(&salt)?;
             let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
@@ -205,6 +232,12 @@ fn main() -> anyhow::Result<()> {
                 "command failed",
             );
             std::fs::write(preimage_output, preimage_hex)?;
+            if let Some(params_output) = &params_output {
+                std::fs::write(
+                    params_output,
+                    serde_json::to_string_pretty(&ParamsOutput { kdf_params, n_bits })?,
+                )?;
+            }
         }
         Commands::DeriveKey {
             preimage_input,
@@ -264,7 +297,9 @@ fn main() -> anyhow::Result<()> {
                 "preimage output file already exists"
             );
             ensure!(threads > 0, "threads must be > 0");
-            ensure!(!key_output.exists(), "key output file already exists");
+            if let Some(key_output) = &key_output {
+                ensure!(!key_output.exists(), "key output file already exists");
+            }
             let salt = std::fs::read_to_string(salt_input)?;
             let salt = parse_salt(&salt)?;
 
@@ -310,7 +345,9 @@ fn main() -> anyhow::Result<()> {
                 Some((preimage_hex, derived_key_hex)) => {
                     eprintln!("Found key in {:?}", pretty(now.elapsed().as_secs_f64()));
                     std::fs::write(preimage_output, preimage_hex)?;
-                    std::fs::write(key_output, derived_key_hex)?;
+                    if let Some(key_output) = key_output {
+                        std::fs::write(key_output, derived_key_hex)?;
+                    }
                 }
                 None => {
                     eprintln!(
