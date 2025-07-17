@@ -19,7 +19,9 @@ High‑entropy secrets are great—until you lose them. WSKDF lets you trade ent
 If you still have the preimage you can derive the key in seconds.
 If you lose it, you (or a recovery service) can brute‑force with parallel hardware within a *predictable* amount of wall‑clock time (see table below).
 
-Typical use‑case: encrypt a Bitcoin seed or small backup with a WSKDF key, stash the preimage on paper in another location, and sleep better knowing you *can* recover it even if the paper is destroyed.
+Typical use‑case: encrypt a Bitcoin seed or small backup with a WSKDF key, stash the preimage on paper in **another location**, and sleep better knowing you *can* recover it even if the paper is destroyed.
+
+By storing the preimage in a different location, you can **resist coercion** to reveal the key. If the attacker still wants the key, it needs to spend time and money to brute-force it.
 
 ---
 
