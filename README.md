@@ -23,6 +23,8 @@ Typical use‑case: encrypt a Bitcoin seed or small backup with a WSKDF key, sta
 
 By storing the preimage in a different location, you can **resist coercion** to reveal the key. If the attacker still wants the key, it needs to spend time and money to brute-force it.
 
+But of course there is no such thing as a safe location, so even you can recover it if you lose access to the preimage.
+
 ---
 
 ## CLI quick‑start
