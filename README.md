@@ -7,23 +7,12 @@
 
 ---
 
-## Motivation
+## Why WSKDF?
 
-High‑entropy secrets are great—until you lose them. WSKDF lets you trade entropy for *recoverability*:
-
-* The **preimage** is just `n` random bits (1 ≤ *n* ≤ 63 in the CLI).
-  – Easy to store on paper/QR and/or with third parties.
-* The **derived key** is produced by Argon2id with tunable cost (`--ops-limit`, `--mem-limit-kbytes`).
-  – Slow and memory‑hard ⇒ brute‑forcing is expensive but bounded.
-
-If you still have the preimage you can derive the key in seconds.
-If you lose it, you (or a recovery service) can brute‑force with parallel hardware within a *predictable* amount of wall‑clock time (see table below).
-
-Typical use‑case: encrypt a Bitcoin seed or small backup with a WSKDF key, stash the preimage on paper in **another location**, and sleep better knowing you *can* recover it even if the paper is destroyed.
-
-By storing the preimage in a different location, you can **resist coercion** to reveal the key. If the attacker still wants the key, it needs to spend time and money to brute-force it.
-
-But of course there is no such thing as a safe location, so even you can recover it if you lose access to the preimage.
+* **Simple secret** – Small enough to jot on paper or share.
+* **Strong key** – run that preimage through one heavy Argon2id pass. One run is quick; billions are costly.
+* **Recoverable** – lose the preimage? Brute‑force time is **predictable** and set by *n* bits and Argon2id cost (see table). You decide whether recovery takes days, weeks or months.
+* **Coercion‑resistant** – stash the preimage **elsewhere**. If forced to hand over the key, you truthfully can’t; an attacker must steal the stash or spend the compute.
 
 ---
 
