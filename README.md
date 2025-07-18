@@ -16,7 +16,7 @@
 
 ### Example application
 Note: this is just an idea, we don't suggest this scheme as it was **not peer reviewed** and is a very advanced usage
-<img width="3381" height="1417" alt="image" src="https://github.com/user-attachments/assets/4fb15057-be75-4170-9e7e-6008219757b9" />
+<img width="3333" height="1215" alt="image" src="https://github.com/user-attachments/assets/4b12e31a-60ef-4b8d-a753-4d500da2e4cc" />
 
 ---
 
