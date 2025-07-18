@@ -14,6 +14,10 @@
 * **Recoverable** – lose the preimage? Brute‑force time is **predictable** and set by *n* bits and Argon2id cost (see table). You decide whether recovery takes days, weeks or months.
 * **Coercion‑resistant** – stash the preimage **elsewhere**. If forced to hand over the key, you truthfully can’t; an attacker must steal the stash or spend the compute.
 
+### Example application
+Note: this is just an idea, we don't suggest this scheme as it was **not peer reviewed** and is a very advanced usage
+<img width="3381" height="1417" alt="image" src="https://github.com/user-attachments/assets/4fb15057-be75-4170-9e7e-6008219757b9" />
+
 ---
 
 ## CLI quick‑start
