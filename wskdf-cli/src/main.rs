@@ -171,6 +171,7 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
+            ensure!(salt_input.exists(), "salt input file does not exist");
             ensure!(
                 !preimage_output.exists(),
                 "preimage output file already exists"
@@ -208,6 +209,7 @@ fn main() -> anyhow::Result<()> {
             kdf_params,
             params_output,
         } => {
+            ensure!(salt_input.exists(), "salt input file does not exist");
             ensure!(
                 !preimage_output.exists(),
                 "preimage output file already exists"
@@ -245,6 +247,11 @@ fn main() -> anyhow::Result<()> {
             kdf_params,
             key_output,
         } => {
+            ensure!(
+                preimage_input.exists(),
+                "preimage input file does not exist"
+            );
+            ensure!(salt_input.exists(), "salt input file does not exist");
             ensure!(!key_output.exists(), "key output file already exists");
             let salt = std::fs::read_to_string(salt_input)?;
             let salt = parse_salt(&salt)?;
@@ -266,6 +273,11 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
+            ensure!(salt_input.exists(), "salt input file does not exist");
+            ensure!(
+                preimage_input.exists(),
+                "preimage input file does not exist"
+            );
             let preimage = std::fs::read_to_string(preimage_input)?;
             let preimage = parse_preimage(&preimage)?;
             let salt = std::fs::read_to_string(salt_input)?;
@@ -292,6 +304,7 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
+            ensure!(salt_input.exists(), "salt input file does not exist");
             ensure!(
                 !preimage_output.exists(),
                 "preimage output file already exists"
@@ -364,6 +377,12 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
+            ensure!(salt_input.exists(), "salt input file does not exist");
+            ensure!(
+                preimage_input.exists(),
+                "preimage input file does not exist"
+            );
+            ensure!(key_input.exists(), "key input file does not exist");
             let key = std::fs::read_to_string(key_input)?;
             let key = parse_key(&key)?;
             let preimage = std::fs::read_to_string(preimage_input)?;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-input_file=$INPUT_FILE
+input_file=${INPUT_FILE:?"INPUT_FILE is not set"}
 if [[ ! -f "$input_file" ]]; then
     echo "Input file $input_file does not exist"
     exit 1
