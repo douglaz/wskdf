@@ -247,7 +247,7 @@ fn main() -> anyhow::Result<()> {
             });
             match found_preimage {
                 Some((preimage_hex, derived_key_hex)) => {
-                    eprintln!("Found key in {:?}", pretty(now.elapsed().as_secs_f64()));
+                    eprintln!("Found key in {}", pretty(now.elapsed().as_secs_f64()));
                     write_file(&preimage_output, &preimage_hex)?;
                     if let Some(key_output) = key_output {
                         write_file(&key_output, &derived_key_hex)?;
@@ -255,7 +255,7 @@ fn main() -> anyhow::Result<()> {
                 }
                 None => {
                     eprintln!(
-                        "Search terminated without a result after {:?}",
+                        "Search terminated without a result after {}",
                         pretty(now.elapsed().as_secs_f64())
                     );
                     anyhow::bail!("Search terminated without a result");
@@ -355,6 +355,7 @@ fn main() -> anyhow::Result<()> {
             }
         }
         Commands::GenerateSalt { output } => {
+            ensure_file_does_not_exists(&output, "output file already exists")?;
             let mut rng = rand::rngs::ThreadRng::default();
             let salt: [u8; SALT_SIZE] = rand::Rng::random(&mut rng);
             let salt_hex = hex::encode(salt);
