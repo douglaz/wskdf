@@ -1,4 +1,7 @@
-use std::{io::Write, path::PathBuf};
+use std::{
+    io::{Read, Write},
+    path::PathBuf,
+};
 
 use anyhow::{Context, ensure};
 use clap::Parser;
@@ -8,6 +11,9 @@ use wskdf_core::{KEY_SIZE, PREIMAGE_SIZE, SALT_SIZE};
 
 const DEFAULT_OPS_LIMIT: u32 = 7;
 const DEFAULT_MEM_LIMIT_KBYTES: u32 = 4096 * 1024;
+
+const STDIN_HELP: &str = "Use - for stdin";
+const STDOUT_HELP: &str = "Use - for stdout";
 
 #[derive(Clone, clap::Args, serde::Serialize)]
 struct KdfParams {
@@ -32,36 +38,16 @@ enum Commands {
         #[arg(short, long)]
         n_bits: u8,
 
-        #[arg(long)]
+        #[arg(long, help = STDOUT_HELP)]
         preimage_output: PathBuf,
 
-        #[arg(long)]
+        #[arg(long, help = STDOUT_HELP)]
         key_output: PathBuf,
 
-        #[arg(long)]
+        #[arg(long, help = STDOUT_HELP)]
         params_output: Option<PathBuf>,
 
-        #[arg(long)]
-        salt_input: PathBuf,
-
-        #[clap(flatten)]
-        kdf_params: KdfParams,
-    },
-    /// Like `output_random_key`, but feeds the preimage to the external command instead of writing it to a file
-    FeedRandomKey {
-        #[arg(short, long)]
-        command: String,
-
-        #[arg(short, long)]
-        n_bits: u8,
-
-        #[arg(long)]
-        preimage_output: PathBuf,
-
-        #[arg(long)]
-        params_output: Option<PathBuf>,
-
-        #[arg(long)]
+        #[arg(long, help = STDIN_HELP)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -69,27 +55,13 @@ enum Commands {
     },
     /// Derives a key from a preimage
     DeriveKey {
-        #[arg(long)]
+        #[arg(long, help = STDIN_HELP)]
         preimage_input: PathBuf,
 
-        #[arg(long)]
+        #[arg(long, help = STDOUT_HELP)]
         key_output: PathBuf,
 
-        #[arg(long)]
-        salt_input: PathBuf,
-
-        #[clap(flatten)]
-        kdf_params: KdfParams,
-    },
-    /// Like `derive_key`, but feeds the derived key to the external command instead of writing it to a file
-    FeedDerivedKey {
-        #[arg(short, long)]
-        command: String,
-
-        #[arg(long)]
-        preimage_input: PathBuf,
-
-        #[arg(long)]
+        #[arg(long, help = STDIN_HELP)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -102,11 +74,11 @@ enum Commands {
         #[arg(short, long)]
         command: String,
 
-        #[arg(long)]
+        #[arg(long, help = STDOUT_HELP)]
         preimage_output: PathBuf,
 
         /// Key output file. If not specified, no key will be written, but it can be derived through preimage
-        #[arg(long)]
+        #[arg(long, help = STDOUT_HELP)]
         key_output: Option<PathBuf>,
 
         #[arg(short, long)]
@@ -116,7 +88,7 @@ enum Commands {
         #[arg(short, long)]
         threads: usize,
 
-        #[arg(long)]
+        #[arg(long, help = STDIN_HELP)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -124,13 +96,13 @@ enum Commands {
     },
     /// Checks if a preimage derives to a given key. Returns exit code 0 if it does, non-zero otherwise
     CheckPreimage {
-        #[arg(long)]
+        #[arg(long, help = STDIN_HELP)]
         key_input: PathBuf,
 
-        #[arg(long)]
+        #[arg(long, help = STDIN_HELP)]
         preimage_input: PathBuf,
 
-        #[arg(long)]
+        #[arg(long, help = STDIN_HELP)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -149,7 +121,7 @@ enum Commands {
         kdf_params: KdfParams,
     },
     GenerateSalt {
-        #[arg(short, long)]
+        #[arg(short, long, help = STDOUT_HELP)]
         output: PathBuf,
     },
 }
@@ -171,16 +143,12 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
-            ensure!(salt_input.exists(), "salt input file does not exist");
-            ensure!(
-                !preimage_output.exists(),
-                "preimage output file already exists"
-            );
-            ensure!(!key_output.exists(), "key output file already exists");
+            ensure_file_does_not_exists(&preimage_output, "preimage output file already exists")?;
+            ensure_file_does_not_exists(&key_output, "key output file already exists")?;
             if let Some(params_output) = &params_output {
-                ensure!(!params_output.exists(), "params output file already exists");
+                ensure_file_does_not_exists(params_output, "params output file already exists")?;
             }
-            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = read_file(&salt_input)?;
             let salt = parse_salt(&salt)?;
             let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
             let preimage_hex = hex::encode(preimage);
@@ -192,52 +160,12 @@ fn main() -> anyhow::Result<()> {
             )
             .context("derive key failed")?;
             let key_hex = hex::encode(key);
-            std::fs::write(preimage_output, preimage_hex)?;
-            std::fs::write(key_output, key_hex)?;
+            write_file(&preimage_output, &preimage_hex)?;
+            write_file(&key_output, &key_hex)?;
             if let Some(params_output) = &params_output {
-                std::fs::write(
+                write_file(
                     params_output,
-                    serde_json::to_string_pretty(&ParamsOutput { kdf_params, n_bits })?,
-                )?;
-            }
-        }
-        Commands::FeedRandomKey {
-            command,
-            n_bits,
-            preimage_output,
-            salt_input,
-            kdf_params,
-            params_output,
-        } => {
-            ensure!(salt_input.exists(), "salt input file does not exist");
-            ensure!(
-                !preimage_output.exists(),
-                "preimage output file already exists"
-            );
-            if let Some(params_output) = &params_output {
-                ensure!(!params_output.exists(), "params output file already exists");
-            }
-            let salt = std::fs::read_to_string(salt_input)?;
-            let salt = parse_salt(&salt)?;
-            let preimage = wskdf_core::gen_rand_preimage(n_bits)?;
-            let preimage_hex = hex::encode(preimage);
-            let key = wskdf_core::wskdf_derive_key(
-                &preimage,
-                &salt,
-                kdf_params.ops_limit,
-                kdf_params.mem_limit_kbytes,
-            )
-            .context("derive key failed")?;
-            let key_hex = hex::encode(key);
-            ensure!(
-                exec_and_send_to_stdin(key_hex.as_bytes(), command)?.success(),
-                "command failed",
-            );
-            std::fs::write(preimage_output, preimage_hex)?;
-            if let Some(params_output) = &params_output {
-                std::fs::write(
-                    params_output,
-                    serde_json::to_string_pretty(&ParamsOutput { kdf_params, n_bits })?,
+                    &serde_json::to_string_pretty(&ParamsOutput { kdf_params, n_bits })?,
                 )?;
             }
         }
@@ -247,15 +175,10 @@ fn main() -> anyhow::Result<()> {
             kdf_params,
             key_output,
         } => {
-            ensure!(
-                preimage_input.exists(),
-                "preimage input file does not exist"
-            );
-            ensure!(salt_input.exists(), "salt input file does not exist");
-            ensure!(!key_output.exists(), "key output file already exists");
-            let salt = std::fs::read_to_string(salt_input)?;
+            ensure_file_does_not_exists(&key_output, "key output file already exists")?;
+            let salt = read_file(&salt_input)?;
             let salt = parse_salt(&salt)?;
-            let preimage = std::fs::read_to_string(preimage_input)?;
+            let preimage = read_file(&preimage_input)?;
             let preimage = parse_preimage(&preimage)?;
             let key = wskdf_core::wskdf_derive_key(
                 &preimage,
@@ -265,35 +188,7 @@ fn main() -> anyhow::Result<()> {
             )
             .context("derive key failed")?;
             let key_hex = hex::encode(key);
-            std::fs::write(key_output, key_hex)?;
-        }
-        Commands::FeedDerivedKey {
-            command,
-            preimage_input,
-            salt_input,
-            kdf_params,
-        } => {
-            ensure!(salt_input.exists(), "salt input file does not exist");
-            ensure!(
-                preimage_input.exists(),
-                "preimage input file does not exist"
-            );
-            let preimage = std::fs::read_to_string(preimage_input)?;
-            let preimage = parse_preimage(&preimage)?;
-            let salt = std::fs::read_to_string(salt_input)?;
-            let salt = parse_salt(&salt)?;
-            let key = wskdf_core::wskdf_derive_key(
-                &preimage,
-                &salt,
-                kdf_params.ops_limit,
-                kdf_params.mem_limit_kbytes,
-            )
-            .context("derive key failed")?;
-            let key_hex = hex::encode(key);
-            ensure!(
-                exec_and_send_to_stdin(key_hex.as_bytes(), command)?.success(),
-                "command failed",
-            );
+            write_file(&key_output, &key_hex)?;
         }
         Commands::FindKey {
             command,
@@ -304,16 +199,12 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
-            ensure!(salt_input.exists(), "salt input file does not exist");
-            ensure!(
-                !preimage_output.exists(),
-                "preimage output file already exists"
-            );
             ensure!(threads > 0, "threads must be > 0");
+            ensure_file_does_not_exists(&preimage_output, "preimage output file already exists")?;
             if let Some(key_output) = &key_output {
-                ensure!(!key_output.exists(), "key output file already exists");
+                ensure_file_does_not_exists(key_output, "key output file already exists")?;
             }
-            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = read_file(&salt_input)?;
             let salt = parse_salt(&salt)?;
 
             eprintln!("Using {threads} rayon threads");
@@ -357,9 +248,9 @@ fn main() -> anyhow::Result<()> {
             match found_preimage {
                 Some((preimage_hex, derived_key_hex)) => {
                     eprintln!("Found key in {:?}", pretty(now.elapsed().as_secs_f64()));
-                    std::fs::write(preimage_output, preimage_hex)?;
+                    write_file(&preimage_output, &preimage_hex)?;
                     if let Some(key_output) = key_output {
-                        std::fs::write(key_output, derived_key_hex)?;
+                        write_file(&key_output, &derived_key_hex)?;
                     }
                 }
                 None => {
@@ -377,17 +268,11 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
-            ensure!(salt_input.exists(), "salt input file does not exist");
-            ensure!(
-                preimage_input.exists(),
-                "preimage input file does not exist"
-            );
-            ensure!(key_input.exists(), "key input file does not exist");
-            let key = std::fs::read_to_string(key_input)?;
+            let key = read_file(&key_input)?;
             let key = parse_key(&key)?;
-            let preimage = std::fs::read_to_string(preimage_input)?;
+            let preimage = read_file(&preimage_input)?;
             let preimage = parse_preimage(&preimage)?;
-            let salt = std::fs::read_to_string(salt_input)?;
+            let salt = read_file(&salt_input)?;
             let salt = parse_salt(&salt)?;
             let derived_key = wskdf_core::wskdf_derive_key(
                 &preimage,
@@ -473,10 +358,37 @@ fn main() -> anyhow::Result<()> {
             let mut rng = rand::rngs::ThreadRng::default();
             let salt: [u8; SALT_SIZE] = rand::Rng::random(&mut rng);
             let salt_hex = hex::encode(salt);
-            std::fs::write(output, salt_hex)?;
+            write_file(&output, &salt_hex)?;
         }
     };
     Ok(())
+}
+
+fn ensure_file_does_not_exists(path: &std::path::Path, message: &str) -> anyhow::Result<()> {
+    if path.as_os_str() != "-" {
+        ensure!(!path.exists(), "{message}");
+    }
+    Ok(())
+}
+
+fn read_file(path: &std::path::Path) -> anyhow::Result<String> {
+    if path.as_os_str() == "-" {
+        let mut buffer = String::new();
+        std::io::stdin().read_to_string(&mut buffer)?;
+        Ok(buffer)
+    } else {
+        std::fs::read_to_string(path)
+            .with_context(|| format!("failed to read file {}", path.display()))
+    }
+}
+
+fn write_file(path: &std::path::Path, content: &str) -> anyhow::Result<()> {
+    if path.as_os_str() == "-" {
+        Ok(std::io::stdout().write_all(content.as_bytes())?)
+    } else {
+        std::fs::write(path, content)
+            .with_context(|| format!("failed to write file {}", path.display()))
+    }
 }
 
 fn parse_salt(salt: &str) -> anyhow::Result<[u8; SALT_SIZE]> {
