@@ -872,4 +872,30 @@ mod tests {
             calculate_random_times(calculate_search_space(20), 2048, 30.0);
         assert_eq!(random_expected_20, 7680.0); // 2 hours 8 minutes in seconds
     }
+
+    #[test]
+    fn test_6bit_calculation_fix() {
+        // Test the specific 6-bit calculation issue identified in README.md
+        // 6-bit systematic search (16 threads, 30s): ceil(32/16) * 30 = 2 * 30 = 60s = 1min 0s
+
+        let space_6bit = calculate_search_space(6); // 2^5 = 32
+        assert_eq!(space_6bit, 32.0);
+
+        let (_, systematic_worst_6) = calculate_systematic_times(space_6bit, 16, 30.0);
+        assert_eq!(systematic_worst_6, 60.0); // Should be 60 seconds, not 31
+        assert_eq!(pretty(systematic_worst_6), "1min 0s"); // Should format as 1min 0s
+
+        // Also verify bits 1-5 are correct at 30s each
+        for bits in 1..=5 {
+            let space = calculate_search_space(bits);
+            let (_, worst) = calculate_systematic_times(space, 16, 30.0);
+            assert_eq!(worst, 30.0, "Bit {bits} should have 30s worst-case time");
+        }
+
+        // And verify 7-bit is 2min 0s, not 2min 4s
+        let space_7bit = calculate_search_space(7); // 2^6 = 64
+        let (_, systematic_worst_7) = calculate_systematic_times(space_7bit, 16, 30.0);
+        assert_eq!(systematic_worst_7, 120.0); // Should be 120 seconds
+        assert_eq!(pretty(systematic_worst_7), "2min 0s"); // Should format as 2min 0s
+    }
 }

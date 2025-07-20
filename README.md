@@ -150,8 +150,9 @@ The table below shows realistic scenarios:
 | Bits | 16 threads 🖥️<br>(**systematic search**) | 2048 threads 🏭<br>(**systematic search**) | 2048 threads 🏭<br>(**random search**) |                   |                     |
 |------|------------------------------------------|---------------------------------------------|----------------------------------------|-------------------|---------------------|
 |      | Worst-case time                          | Worst-case time                             | Expected time | 99th percentile     | 99.9th percentile   |
-| 1‑6  | 31 s                                     | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
-| 7    | 2 min 4 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 1‑5  | 30 s                                     | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 6    | 1 min 0 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 7    | 2 min 0 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
 | 8    | 4 min 8 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
 | 9    | 8 min 0 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
 | 10   | 16 min 30 s                              | 30 s                                        | 31 s          | 2 min 23 s          | 3 min 33 s          |
