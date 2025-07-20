@@ -215,8 +215,31 @@ fn main() -> anyhow::Result<()> {
                 .build()
                 .context("failed to build rayon pool")?;
             eprintln!("Starting parallel search");
-            let now = std::time::Instant::now();
+
+            // Estimate search completion times
             let space = 1u64 << (n_bits - 1); // 2^(n-1)
+            let expected_trials = space as f64 / (2.0 * threads as f64);
+            // Rough estimate based on typical KDF performance - this could be calibrated
+            let est_time_per_trial = 0.1; // seconds - rough placeholder
+            let expected_time = expected_trials * est_time_per_trial;
+
+            eprintln!("\nTime estimates for full search:");
+            eprintln!(
+                "  50% chance by: {}",
+                pretty(expected_time * percentile_multiplier(0.50))
+            );
+            eprintln!(
+                "  90% chance by: {}",
+                pretty(expected_time * percentile_multiplier(0.90))
+            );
+            eprintln!(
+                "  99% chance by: {}",
+                pretty(expected_time * percentile_multiplier(0.99))
+            );
+            eprintln!("  Expected time: {}", pretty(expected_time));
+            eprintln!();
+
+            let now = std::time::Instant::now();
             let start = {
                 let mut rng = rand::rngs::ThreadRng::default();
                 rand::Rng::random_range(&mut rng, 0..space)
@@ -342,17 +365,47 @@ fn main() -> anyhow::Result<()> {
             eprintln!("Thread derivations per second: {thread_derivations_per_second:.2?}");
 
             eprintln!("\nEstimated time to brute-force one preimage/key pair:");
-            eprintln!("{:>4} │ {:>12}", "bits", "expected time");
-            eprintln!("{:->4}-┼-{:->12}", "", "");
+            eprintln!(
+                "{:>4} │ {:>18} │ {:>18} │ {:>18}",
+                "bits", "systematic (worst)", "random (expected)", "random (99th %ile)"
+            );
+            eprintln!("{:->4}-┼-{:->18}-┼-{:->18}-┼-{:->18}", "", "", "", "");
 
             for bits in 1u8..=32 {
                 // space = 2^(bits-1) because MSB is always 1
                 let space: f64 = 2f64.powi(bits as i32 - 1); // 2^(n-1) candidates
-                let per_thread_work = (space / (2.0 * threads as f64)).max(1.0); // ≥ 1 round
-                let exp_secs = per_thread_work * thread_avg_time;
-                let human = pretty(exp_secs);
-                eprintln!("{bits:>4} │ {human:>12}");
+                
+                // Systematic search: divide space among threads, worst case is entire partition
+                let systematic_work = (space / threads as f64).max(1.0);
+                let systematic_secs = systematic_work * thread_avg_time;
+                
+                // Random search: expected trials = space/2, but distributed among threads
+                let random_expected_work = (space / (2.0 * threads as f64)).max(1.0);
+                let random_expected_secs = random_expected_work * thread_avg_time;
+                let random_99th_secs = random_expected_secs * percentile_multiplier(0.99);
+                
+                let systematic_human = pretty(systematic_secs);
+                let random_human = pretty(random_expected_secs);
+                let random_99th_human = pretty(random_99th_secs);
+                eprintln!("{bits:>4} │ {systematic_human:>18} │ {random_human:>18} │ {random_99th_human:>18}");
             }
+
+            eprintln!("\nSearch strategy explanation:");
+            eprintln!("• Systematic search: Partitions search space among threads (worst-case time shown)");
+            eprintln!("• Random search: Each thread picks candidates randomly (follows geometric distribution)");
+            eprintln!("\nRandom search variance:");
+            eprintln!(
+                "• 50th percentile (median): ~{:.1}× expected time",
+                percentile_multiplier(0.50)
+            );
+            eprintln!(
+                "• 90th percentile: ~{:.1}× expected time",
+                percentile_multiplier(0.90)
+            );
+            eprintln!(
+                "• 99th percentile: ~{:.1}× expected time",
+                percentile_multiplier(0.99)
+            );
         }
         Commands::GenerateSalt { output } => {
             ensure_file_does_not_exists(&output, "output file already exists")?;
@@ -441,6 +494,10 @@ fn exec_and_send_to_stdin(
         .write_all(bytes)
         .context("failed to write stdin")?;
     Ok(child.wait()?)
+}
+
+fn percentile_multiplier(percentile: f64) -> f64 {
+    -((1.0 - percentile).ln())
 }
 
 fn pretty(secs: f64) -> String {

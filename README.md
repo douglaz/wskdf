@@ -112,35 +112,46 @@ All commands share the Argon2id cost flags. For release mode we have:
   * 🖥️ **16 threads** (e.g. 16-core/64GB RAM desktop machine)
   * 🏭 **2048 threads** (e.g. 64×32-core/128GB RAM machines on some cloud provider)
 
-| Bits | 16 threads 🖥️<br>(**systematic search**) | 2048 threads 🏭<br>(**random search**) |
-| ---- | ----------------------------------------- | -------------------------------------- |
-| 1‑6  | 30 s                                      | 30 s                                   |
-| 7    | 1 min 0 s                                 | 30 s                                   |
-| 8    | 2 min 0 s                                 | 30 s                                   |
-| 9    | 4 min 3 s                                 | 30 s                                   |
-| 10   | 8 min 29 s                                | 31 s                                   |
-| 11   | 16 min 21 s                               | 35 s                                   |
-| 12   | 32 min 2 s                                | 47 s                                   |
-| 13   | 1 h 4 m                                   | 1 min 17 s                             |
-| 14   | 2 h 8 m                                   | 2 min 17 s                             |
-| 15   | 4 h 16 m                                  | 4 min 17 s                             |
-| 16   | 8 h 32 m                                  | 8 min 20 s                             |
-| 17   | 17 h 4 m                                  | 16 min 19 s                            |
-| 18   | 1 d 10 h                                  | 32 min 20 s                            |
-| 19   | 2 d 20 h                                  | 1 h 4 m                                |
-| 20   | 5 d 17 h                                  | 2 h 8 m                                |
-| 21   | 11 d 9 h                                  | 4 h 16 m                               |
-| 22   | 22 d 18 h                                 | 8 h 32 m                               |
-| 23   | 45 d 12 h                                 | 17 h 4 m                               |
-| 24   | 91 d 1 h                                  | 1 d 10 h                               |
-| 25   | 182 d 17 h                                | 2 d 20 h                               |
-| 26   | 364 d 2 h                                 | 5 d 16 h                               |
-| 27   | 1 y 363 d                                 | 11 d 9 h                               |
-| 28   | 3 y 361 d                                 | 22 d 18 h                              |
-| 29   | 7 y 358 d                                 | 45 d 12 h                              |
-| 30   | 15 y 355 d                                | 91 d                                   |
-| 31   | 31 y 336 d                                | 182 d                                  |
-| 32   | 63 y 284 d                                | 364 d                                  |
+| Bits | 16 threads 🖥️<br>(**systematic search**) | 2048 threads 🏭<br>(**random search**) |                   |
+|------|------------------------------------------|-----------------------------------------|-------------------|
+|      | Worst-case time                          | Expected time | 99th percentile     |
+| 1‑6  | 31 s                                     | 30 s          | 2 min 19 s          |
+| 7    | 2 min 4 s                                | 30 s          | 2 min 19 s          |
+| 8    | 4 min 8 s                                | 30 s          | 2 min 19 s          |
+| 9    | 8 min 15 s                               | 30 s          | 2 min 19 s          |
+| 10   | 16 min 30 s                              | 31 s          | 2 min 23 s          |
+| 11   | 33 min 1 s                               | 35 s          | 2 min 41 s          |
+| 12   | 1 h 6 min                                | 47 s          | 3 min 36 s          |
+| 13   | 2 h 12 min                               | 1 min 17 s    | 5 min 55 s          |
+| 14   | 4 h 24 min                               | 2 min 17 s    | 10 min 31 s         |
+| 15   | 8 h 48 min                               | 4 min 17 s    | 19 min 44 s         |
+| 16   | 17 h 36 min                              | 8 min 20 s    | 38 min 24 s         |
+| 17   | 1 d 11 h                                 | 16 min 19 s   | 1 h 15 m            |
+| 18   | 2 d 22 h                                 | 32 min 20 s   | 2 h 29 m            |
+| 19   | 5 d 21 h                                 | 1 h 4 m       | 4 h 55 m            |
+| 20   | 11 d 18 h                                | 2 h 8 m       | 9 h 52 m            |
+| 21   | 23 d 11 h                                | 4 h 16 m      | 19 h 44 m           |
+| 22   | 46 d 23 h                                | 8 h 32 m      | 1 d 15 h            |
+| 23   | 93 d 22 h                                | 17 h 4 m      | 3 d 6 h             |
+| 24   | 187 d 19 h                               | 1 d 10 h      | 6 d 13 h            |
+| 25   | 1 y 10 d                                 | 2 d 20 h      | 13 d 2 h            |
+| 26   | 2 y 21 d                                 | 5 d 16 h      | 26 d 1 h            |
+| 27   | 4 y 41 d                                 | 11 d 9 h      | 52 d 4 h            |
+| 28   | 8 y 83 d                                 | 22 d 18 h     | 104 d 8 h           |
+| 29   | 16 y 165 d                               | 45 d 12 h     | 208 d 16 h          |
+| 30   | 32 y 331 d                               | 91 d          | 417 d 8 h           |
+| 31   | 65 y 297 d                               | 182 d         | 2 y 105 d           |
+| 32   | 131 y 228 d                              | 364 d         | 4 y 212 d           |
+
+## Understanding Random Search Variance
+
+Random search follows a geometric distribution with high variance. While the table shows expected times, actual recovery can vary significantly:
+
+* **50% chance** of finding the key in ~0.7× the expected time
+* **90% chance** it will take longer than ~2.3× the expected time  
+* **99% chance** it will take longer than ~4.6× the expected time
+
+For planning purposes, consider the 99th percentile times shown in the table above to understand worst-case scenarios.
 
 **Interpretation**
 
@@ -156,47 +167,56 @@ Starting benchmark with 1 iterations across 16 threads...
 
 Benchmark results:
 Threads: 16
-Total time: 29.80s
+Total time: 30.95s
 Total iterations: 16
-Global average time per derivation: 1862.77ms
-Global derivations per second: 0.54
-Thread average time per derivation: 29.80s
+Global average time per derivation: 1934.24ms
+Global derivations per second: 0.52
+Thread average time per derivation: 30.95s
 Thread derivations per second: 0.03
 
 Estimated time to brute-force one preimage/key pair:
-bits │ expected time
------┼-------------
-   1 │          30s
-   2 │          30s
-   3 │          30s
-   4 │          30s
-   5 │          30s
-   6 │          30s
-   7 │          60s
-   8 │     1min 59s
-   9 │     3min 58s
-  10 │     7min 57s
-  11 │    15min 54s
-  12 │    31min 47s
-  13 │      1h 4min
-  14 │      2h 7min
-  15 │     4h 14min
-  16 │     8h 29min
-  17 │    16h 57min
-  18 │       1d 10h
-  19 │       2d 20h
-  20 │       5d 16h
-  21 │       11d 7h
-  22 │      22d 15h
-  23 │       45d 5h
-  24 │      90d 10h
-  25 │     180d 21h
-  26 │     361d 17h
-  27 │      1y 358d
-  28 │      3y 351d
-  29 │      7y 337d
-  30 │     15y 309d
-  31 │     31y 252d
-  32 │     63y 139d
+bits │ systematic (worst) │  random (expected) │ random (99th %ile)
+-----┼--------------------┼--------------------┼-------------------
+   1 │                31s │                31s │           2min 23s
+   2 │                31s │                31s │           2min 23s
+   3 │                31s │                31s │           2min 23s
+   4 │                31s │                31s │           2min 23s
+   5 │                31s │                31s │           2min 23s
+   6 │            1min 2s │                31s │           2min 23s
+   7 │            2min 4s │            1min 2s │           4min 45s
+   8 │            4min 8s │            2min 4s │           9min 30s
+   9 │           8min 15s │            4min 8s │           19min 0s
+  10 │          16min 30s │           8min 15s │           38min 0s
+  11 │           33min 1s │          16min 30s │           1h 16min
+  12 │            1h 6min │           33min 1s │           2h 32min
+  13 │           2h 12min │            1h 6min │            5h 4min
+  14 │           4h 24min │           2h 12min │           10h 8min
+  15 │           8h 48min │           4h 24min │          20h 16min
+  16 │          17h 36min │           8h 48min │             1d 17h
+  17 │             1d 11h │          17h 36min │              3d 9h
+  18 │             2d 22h │             1d 11h │             6d 18h
+  19 │             5d 21h │             2d 22h │            13d 12h
+  20 │            11d 18h │             5d 21h │             27d 1h
+  21 │            23d 11h │            11d 18h │             54d 1h
+  22 │            46d 23h │            23d 11h │            108d 2h
+  23 │            93d 22h │            46d 23h │            216d 5h
+  24 │           187d 19h │            93d 22h │             1y 67d
+  25 │             1y 10d │           187d 19h │            2y 134d
+  26 │             2y 21d │             1y 10d │            4y 269d
+  27 │             4y 41d │             2y 21d │            9y 172d
+  28 │             8y 83d │             4y 41d │           18y 344d
+  29 │           16y 165d │             8y 83d │           37y 323d
+  30 │           32y 331d │           16y 165d │           75y 281d
+  31 │           65y 297d │           32y 331d │          151y 197d
+  32 │          131y 228d │           65y 297d │           303y 28d
+
+Search strategy explanation:
+• Systematic search: Partitions search space among threads (worst-case time shown)
+• Random search: Each thread picks candidates randomly (follows geometric distribution)
+
+Random search variance:
+• 50th percentile (median): ~0.7× expected time
+• 90th percentile: ~2.3× expected time
+• 99th percentile: ~4.6× expected time
 ```
 ---
