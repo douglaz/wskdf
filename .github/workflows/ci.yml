@@ -21,7 +21,7 @@ jobs:
       uses: DeterminateSystems/magic-nix-cache-action@main
       
     - name: Build project
-      run: nix develop --command cargo build -F alkali --release --target x86_64-unknown-linux-musl
+      run: nix develop --command cargo build -F alkali --release
       
     - name: Run tests
       run: nix develop --command cargo test -F alkali
