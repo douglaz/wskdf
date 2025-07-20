@@ -153,7 +153,7 @@ The table below shows realistic scenarios:
 | 1‑6  | 31 s                                     | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
 | 7    | 2 min 4 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
 | 8    | 4 min 8 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
-| 9    | 8 min 15 s                               | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 9    | 8 min 0 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
 | 10   | 16 min 30 s                              | 30 s                                        | 31 s          | 2 min 23 s          | 3 min 33 s          |
 | 11   | 33 min 1 s                               | 30 s                                        | 35 s          | 2 min 41 s          | 4 min 1 s           |
 | 12   | 1 h 6 min                                | 30 s                                        | 47 s          | 3 min 36 s          | 5 min 24 s          |
@@ -164,14 +164,14 @@ The table below shows realistic scenarios:
 | 17   | 1 d 11 h                                 | 16 min 0 s                                  | 16 min 19 s   | 1 h 15 m            | 1 h 52 m            |
 | 18   | 2 d 22 h                                 | 32 min 0 s                                  | 32 min 20 s   | 2 h 29 m            | 3 h 43 m            |
 | 19   | 5 d 21 h                                 | 1 h 4 m                                     | 1 h 4 m       | 4 h 55 m            | 7 h 22 m            |
-| 20   | 11 d 18 h                                | 2 h 8 m                                     | 2 h 8 m       | 9 h 52 m            | 14 h 48 m           |
+| 20   | 11 d 9 h                                 | 2 h 8 m                                     | 2 h 8 m       | 9 h 52 m            | 14 h 48 m           |
 | 21   | 23 d 11 h                                | 4 h 16 m                                    | 4 h 16 m      | 19 h 44 m           | 1 d 5 h             |
 | 22   | 46 d 23 h                                | 8 h 32 m                                    | 8 h 32 m      | 1 d 15 h            | 2 d 11 h            |
-| 23   | 93 d 22 h                                | 17 h 4 m                                    | 17 h 4 m      | 3 d 6 h             | 4 d 21 h            |
-| 24   | 187 d 19 h                               | 1 d 10 h                                    | 1 d 10 h      | 6 d 13 h            | 9 d 18 h            |
-| 25   | 1 y 10 d                                 | 2 d 20 h                                    | 2 d 20 h      | 13 d 2 h            | 19 d 12 h           |
-| 26   | 2 y 21 d                                 | 5 d 16 h                                    | 5 d 16 h      | 26 d 1 h            | 39 d 1 h            |
-| 27   | 4 y 41 d                                 | 11 d 9 h                                    | 11 d 9 h      | 52 d 4 h            | 78 d 6 h            |
+| 23   | 91 d 1 h                                 | 17 h 4 m                                    | 17 h 4 m      | 3 d 6 h             | 4 d 21 h            |
+| 24   | 182 d 1 h                                | 1 d 10 h                                    | 1 d 10 h      | 6 d 13 h            | 9 d 18 h            |
+| 25   | 364 d 2 h                                | 2 d 20 h                                    | 2 d 20 h      | 13 d 2 h            | 19 d 12 h           |
+| 26   | 728 d 4 h                                | 5 d 17 h                                    | 5 d 17 h      | 26 d 1 h            | 39 d 1 h            |
+| 27   | 1456 d 8 h                               | 11 d 9 h                                    | 11 d 9 h      | 52 d 4 h            | 78 d 6 h            |
 | 28   | 8 y 83 d                                 | 22 d 18 h                                   | 22 d 18 h     | 104 d 8 h           | 156 d 12 h          |
 | 29   | 16 y 165 d                               | 45 d 12 h                                   | 45 d 12 h     | 208 d 16 h          | 312 d 24 h          |
 | 30   | 32 y 331 d                               | 91 d                                        | 91 d          | 417 d 8 h           | 1 y 261 d           |
@@ -194,11 +194,11 @@ For planning purposes, consider the 99th percentile times shown in the table abo
 
 **Interpretation**
 
-* **Single machine (16 threads)**: Systematic search partitions the space among threads, eliminating duplicates. Each thread searches a distinct range, guaranteeing the key will be found after searching exactly half the total space on average.
+* **Single machine (16 threads)**: Systematic search partitions the space evenly among threads, eliminating duplicate work. Each thread searches 1/16th of the total space. The expected time to find a key is when half the total space has been searched.
 
-* **Cluster (2048 threads)**: Random search where each machine independently selects candidates. The 128× increase in threads (2048 vs 16) compensates for occasional duplicate work, resulting in much faster wall-clock time despite the same expected number of trials.
+* **Cluster (2048 threads)**: Random search where threads independently select candidates. Despite occasional duplicate work, the 128× increase in threads (2048 vs 16) results in much faster wall-clock time.
 
-* **Key insight**: With equal thread counts, systematic search would complete in half the time of random search due to no duplicates. The table shows different thread counts to reflect realistic deployment scenarios.
+* **Key insight**: For the same number of threads, systematic search would complete in half the expected time of random search (due to no duplicates). However, the table compares different thread counts to show realistic deployment scenarios.
 
 
 ### Real world example using the `benchmark` command
