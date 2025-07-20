@@ -112,36 +112,36 @@ All commands share the Argon2id cost flags. For release mode we have:
   * 🖥️ **16 threads** (e.g. 16-core/64GB RAM desktop machine)
   * 🏭 **2048 threads** (e.g. 64×32-core/128GB RAM machines on some cloud provider)
 
-| Bits | 16 threads 🖥️<br>(**systematic search**) | 2048 threads 🏭<br>(**random search**) |                   |
-|------|------------------------------------------|-----------------------------------------|-------------------|
-|      | Worst-case time                          | Expected time | 99th percentile     |
-| 1‑6  | 31 s                                     | 30 s          | 2 min 19 s          |
-| 7    | 2 min 4 s                                | 30 s          | 2 min 19 s          |
-| 8    | 4 min 8 s                                | 30 s          | 2 min 19 s          |
-| 9    | 8 min 15 s                               | 30 s          | 2 min 19 s          |
-| 10   | 16 min 30 s                              | 31 s          | 2 min 23 s          |
-| 11   | 33 min 1 s                               | 35 s          | 2 min 41 s          |
-| 12   | 1 h 6 min                                | 47 s          | 3 min 36 s          |
-| 13   | 2 h 12 min                               | 1 min 17 s    | 5 min 55 s          |
-| 14   | 4 h 24 min                               | 2 min 17 s    | 10 min 31 s         |
-| 15   | 8 h 48 min                               | 4 min 17 s    | 19 min 44 s         |
-| 16   | 17 h 36 min                              | 8 min 20 s    | 38 min 24 s         |
-| 17   | 1 d 11 h                                 | 16 min 19 s   | 1 h 15 m            |
-| 18   | 2 d 22 h                                 | 32 min 20 s   | 2 h 29 m            |
-| 19   | 5 d 21 h                                 | 1 h 4 m       | 4 h 55 m            |
-| 20   | 11 d 18 h                                | 2 h 8 m       | 9 h 52 m            |
-| 21   | 23 d 11 h                                | 4 h 16 m      | 19 h 44 m           |
-| 22   | 46 d 23 h                                | 8 h 32 m      | 1 d 15 h            |
-| 23   | 93 d 22 h                                | 17 h 4 m      | 3 d 6 h             |
-| 24   | 187 d 19 h                               | 1 d 10 h      | 6 d 13 h            |
-| 25   | 1 y 10 d                                 | 2 d 20 h      | 13 d 2 h            |
-| 26   | 2 y 21 d                                 | 5 d 16 h      | 26 d 1 h            |
-| 27   | 4 y 41 d                                 | 11 d 9 h      | 52 d 4 h            |
-| 28   | 8 y 83 d                                 | 22 d 18 h     | 104 d 8 h           |
-| 29   | 16 y 165 d                               | 45 d 12 h     | 208 d 16 h          |
-| 30   | 32 y 331 d                               | 91 d          | 417 d 8 h           |
-| 31   | 65 y 297 d                               | 182 d         | 2 y 105 d           |
-| 32   | 131 y 228 d                              | 364 d         | 4 y 212 d           |
+| Bits | 16 threads 🖥️<br>(**systematic search**) | 2048 threads 🏭<br>(**random search**) |                   |                     |
+|------|------------------------------------------|-----------------------------------------|-------------------|---------------------|
+|      | Worst-case time                          | Expected time | 99th percentile     | 99.9th percentile   |
+| 1‑6  | 31 s                                     | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 7    | 2 min 4 s                                | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 8    | 4 min 8 s                                | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 9    | 8 min 15 s                               | 30 s          | 2 min 19 s          | 3 min 27 s          |
+| 10   | 16 min 30 s                              | 31 s          | 2 min 23 s          | 3 min 33 s          |
+| 11   | 33 min 1 s                               | 35 s          | 2 min 41 s          | 4 min 1 s           |
+| 12   | 1 h 6 min                                | 47 s          | 3 min 36 s          | 5 min 24 s          |
+| 13   | 2 h 12 min                               | 1 min 17 s    | 5 min 55 s          | 8 min 53 s          |
+| 14   | 4 h 24 min                               | 2 min 17 s    | 10 min 31 s         | 15 min 47 s         |
+| 15   | 8 h 48 min                               | 4 min 17 s    | 19 min 44 s         | 29 min 36 s         |
+| 16   | 17 h 36 min                              | 8 min 20 s    | 38 min 24 s         | 57 min 36 s         |
+| 17   | 1 d 11 h                                 | 16 min 19 s   | 1 h 15 m            | 1 h 52 m            |
+| 18   | 2 d 22 h                                 | 32 min 20 s   | 2 h 29 m            | 3 h 43 m            |
+| 19   | 5 d 21 h                                 | 1 h 4 m       | 4 h 55 m            | 7 h 22 m            |
+| 20   | 11 d 18 h                                | 2 h 8 m       | 9 h 52 m            | 14 h 48 m           |
+| 21   | 23 d 11 h                                | 4 h 16 m      | 19 h 44 m           | 1 d 5 h             |
+| 22   | 46 d 23 h                                | 8 h 32 m      | 1 d 15 h            | 2 d 11 h            |
+| 23   | 93 d 22 h                                | 17 h 4 m      | 3 d 6 h             | 4 d 21 h            |
+| 24   | 187 d 19 h                               | 1 d 10 h      | 6 d 13 h            | 9 d 18 h            |
+| 25   | 1 y 10 d                                 | 2 d 20 h      | 13 d 2 h            | 19 d 12 h           |
+| 26   | 2 y 21 d                                 | 5 d 16 h      | 26 d 1 h            | 39 d 1 h            |
+| 27   | 4 y 41 d                                 | 11 d 9 h      | 52 d 4 h            | 78 d 6 h            |
+| 28   | 8 y 83 d                                 | 22 d 18 h     | 104 d 8 h           | 156 d 12 h          |
+| 29   | 16 y 165 d                               | 45 d 12 h     | 208 d 16 h          | 312 d 24 h          |
+| 30   | 32 y 331 d                               | 91 d          | 417 d 8 h           | 1 y 261 d           |
+| 31   | 65 y 297 d                               | 182 d         | 2 y 105 d           | 3 y 157 d           |
+| 32   | 131 y 228 d                              | 364 d         | 4 y 212 d           | 6 y 318 d           |
 
 ## Understanding Random Search Variance
 

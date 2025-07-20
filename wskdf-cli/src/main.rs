@@ -366,10 +366,10 @@ fn main() -> anyhow::Result<()> {
 
             eprintln!("\nEstimated time to brute-force one preimage/key pair:");
             eprintln!(
-                "{:>4} │ {:>18} │ {:>18} │ {:>18}",
-                "bits", "systematic (worst)", "random (expected)", "random (99th %ile)"
+                "{:>4} │ {:>18} │ {:>18} │ {:>18} │ {:>18}",
+                "bits", "systematic (worst)", "random (expected)", "random (99th %ile)", "random (99.9th %ile)"
             );
-            eprintln!("{:->4}-┼-{:->18}-┼-{:->18}-┼-{:->18}", "", "", "", "");
+            eprintln!("{:->4}-┼-{:->18}-┼-{:->18}-┼-{:->18}-┼-{:->18}", "", "", "", "", "");
 
             for bits in 1u8..=32 {
                 // space = 2^(bits-1) because MSB is always 1
@@ -383,11 +383,13 @@ fn main() -> anyhow::Result<()> {
                 let random_expected_work = (space / (2.0 * threads as f64)).max(1.0);
                 let random_expected_secs = random_expected_work * thread_avg_time;
                 let random_99th_secs = random_expected_secs * percentile_multiplier(0.99);
+                let random_999th_secs = random_expected_secs * percentile_multiplier(0.999);
                 
                 let systematic_human = pretty(systematic_secs);
                 let random_human = pretty(random_expected_secs);
                 let random_99th_human = pretty(random_99th_secs);
-                eprintln!("{bits:>4} │ {systematic_human:>18} │ {random_human:>18} │ {random_99th_human:>18}");
+                let random_999th_human = pretty(random_999th_secs);
+                eprintln!("{bits:>4} │ {systematic_human:>18} │ {random_human:>18} │ {random_99th_human:>18} │ {random_999th_human:>18}");
             }
 
             eprintln!("\nSearch strategy explanation:");
@@ -405,6 +407,10 @@ fn main() -> anyhow::Result<()> {
             eprintln!(
                 "• 99th percentile: ~{:.1}× expected time",
                 percentile_multiplier(0.99)
+            );
+            eprintln!(
+                "• 99.9th percentile: ~{:.1}× expected time",
+                percentile_multiplier(0.999)
             );
         }
         Commands::GenerateSalt { output } => {
