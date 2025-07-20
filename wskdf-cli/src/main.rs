@@ -370,14 +370,9 @@ fn main() -> anyhow::Result<()> {
             eprintln!();
             eprintln!(
                 "{:>4} │ {:>18} │ {:>18}",
-                "bits",
-                "systematic (worst)",
-                "systematic (avg)"
+                "bits", "systematic (worst)", "systematic (avg)"
             );
-            eprintln!(
-                "{:->4}-┼-{:->18}-┼-{:->18}",
-                "", "", ""
-            );
+            eprintln!("{:->4}-┼-{:->18}-┼-{:->18}", "", "", "");
 
             for bits in 1u8..=32 {
                 // space = 2^(bits-1) because MSB is always 1
@@ -391,9 +386,7 @@ fn main() -> anyhow::Result<()> {
 
                 let systematic_worst_human = pretty(systematic_worst_secs);
                 let systematic_avg_human = pretty(systematic_avg_secs);
-                eprintln!(
-                    "{bits:>4} │ {systematic_worst_human:>18} │ {systematic_avg_human:>18}"
-                );
+                eprintln!("{bits:>4} │ {systematic_worst_human:>18} │ {systematic_avg_human:>18}");
             }
 
             eprintln!("\nSystematic search explanation:");
