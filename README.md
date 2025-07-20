@@ -162,59 +162,63 @@ For planning purposes, consider the 99th percentile times shown in the table abo
 ### Real world example using the `benchmark` command
 ```bash
 $ cargo run --release -F alkali -- benchmark -i 1 -t 16
+Using 16 threads for benchmark
+Starting benchmark with 1 iterations across 16 threads...
+
 Benchmark results:
 Threads: 16
-Total time: 30.79s
+Total time: 30.51s
 Total iterations: 16
-Global average time per derivation: 1924.35ms
+Global average time per derivation: 1907.07ms
 Global derivations per second: 0.52
-Thread average time per derivation: 30.79s
+Thread average time per derivation: 30.51s
 Thread derivations per second: 0.03
 
 Estimated time to brute-force one preimage/key pair:
-bits │ systematic (worst) │  random (expected) │ random (99th %ile) │ random (99.9th %ile)
------┼--------------------┼--------------------┼--------------------┼-------------------
-   1 │                31s │                31s │           2min 22s │           3min 33s
-   2 │                31s │                31s │           2min 22s │           3min 33s
-   3 │                31s │                31s │           2min 22s │           3min 33s
-   4 │                31s │                31s │           2min 22s │           3min 33s
-   5 │                31s │                31s │           2min 22s │           3min 33s
-   6 │            1min 2s │                31s │           2min 22s │           3min 33s
-   7 │            2min 3s │            1min 2s │           4min 44s │            7min 5s
-   8 │            4min 6s │            2min 3s │           9min 27s │          14min 11s
-   9 │           8min 13s │            4min 6s │          18min 54s │          28min 21s
-  10 │          16min 25s │           8min 13s │          37min 49s │          56min 43s
-  11 │          32min 51s │          16min 25s │           1h 16min │           1h 53min
-  12 │            1h 6min │          32min 51s │           2h 31min │           3h 47min
-  13 │           2h 11min │            1h 6min │            5h 2min │           7h 34min
-  14 │           4h 23min │           2h 11min │           10h 5min │           15h 7min
-  15 │           8h 45min │           4h 23min │          20h 10min │              1d 6h
-  16 │          17h 31min │           8h 45min │             1d 16h │             2d 12h
-  17 │             1d 11h │          17h 31min │              3d 9h │              5d 1h
-  18 │             2d 22h │             1d 11h │             6d 17h │             10d 2h
-  19 │             5d 20h │             2d 22h │            13d 11h │             20d 4h
-  20 │            11d 16h │             5d 20h │            26d 21h │             40d 8h
-  21 │             23d 9h │            11d 16h │            53d 19h │            80d 16h
-  22 │            46d 17h │             23d 9h │           107d 13h │            161d 8h
-  23 │            93d 10h │            46d 17h │            215d 2h │           322d 16h
-  24 │           186d 20h │            93d 10h │             1y 65d │            1y 280d
-  25 │              1y 8d │           186d 20h │            2y 130d │            3y 195d
-  26 │             2y 17d │              1y 8d │            4y 260d │             7y 24d
-  27 │             4y 34d │             2y 17d │            9y 154d │            14y 49d
-  28 │             8y 67d │             4y 34d │           18y 309d │            28y 98d
-  29 │           16y 135d │             8y 67d │           37y 252d │           56y 196d
-  30 │           32y 270d │           16y 135d │           75y 139d │           113y 27d
-  31 │           65y 174d │           32y 270d │          150y 279d │           226y 53d
-  32 │          130y 348d │           65y 174d │          301y 193d │          452y 106d
+Note: This benchmark uses 16 threads with systematic search
+For comparison with random search percentiles, see README table
 
-Search strategy explanation:
-• Systematic search: Partitions search space among threads (worst-case time shown)
-• Random search: Each thread picks candidates randomly (follows geometric distribution)
+bits │ systematic (worst) │   systematic (avg)
+-----┼--------------------┼-------------------
+   1 │                31s │                31s
+   2 │                31s │                31s
+   3 │                31s │                31s
+   4 │                31s │                31s
+   5 │                31s │                31s
+   6 │            1min 1s │                31s
+   7 │            2min 2s │            1min 1s
+   8 │            4min 4s │            2min 2s
+   9 │            8min 8s │            4min 4s
+  10 │          16min 16s │            8min 8s
+  11 │          32min 33s │          16min 16s
+  12 │            1h 5min │          32min 33s
+  13 │           2h 10min │            1h 5min
+  14 │           4h 20min │           2h 10min
+  15 │           8h 41min │           4h 20min
+  16 │          17h 22min │           8h 41min
+  17 │             1d 11h │          17h 22min
+  18 │             2d 21h │             1d 11h
+  19 │             5d 19h │             2d 21h
+  20 │            11d 14h │             5d 19h
+  21 │             23d 3h │            11d 14h
+  22 │             46d 7h │             23d 3h
+  23 │            92d 14h │             46d 7h
+  24 │            185d 4h │            92d 14h
+  25 │              1y 5d │            185d 4h
+  26 │             2y 10d │              1y 5d
+  27 │             4y 20d │             2y 10d
+  28 │             8y 41d │             4y 20d
+  29 │            16y 81d │             8y 41d
+  30 │           32y 162d │            16y 81d
+  31 │           64y 324d │           32y 162d
+  32 │          129y 283d │           64y 324d
 
-Random search variance:
-• 50th percentile (median): ~0.7× expected time
-• 90th percentile: ~2.3× expected time
-• 99th percentile: ~4.6× expected time
-• 99.9th percentile: ~6.9× expected time
+Systematic search explanation:
+• Worst-case: One thread gets unlucky and searches entire partition
+• Average case: Threads find target halfway through their partitions
+• No variance: Deterministic partitioning means predictable bounds
+
+For random search with percentiles, see the README table comparing
+systematic (16 threads) vs random search (2048 threads)
 ```
 ---

@@ -365,66 +365,43 @@ fn main() -> anyhow::Result<()> {
             eprintln!("Thread derivations per second: {thread_derivations_per_second:.2?}");
 
             eprintln!("\nEstimated time to brute-force one preimage/key pair:");
+            eprintln!("Note: This benchmark uses {threads} threads with systematic search");
+            eprintln!("For comparison with random search percentiles, see README table");
+            eprintln!();
             eprintln!(
-                "{:>4} │ {:>18} │ {:>18} │ {:>18} │ {:>18}",
+                "{:>4} │ {:>18} │ {:>18}",
                 "bits",
                 "systematic (worst)",
-                "random (expected)",
-                "random (99th %ile)",
-                "random (99.9th %ile)"
+                "systematic (avg)"
             );
             eprintln!(
-                "{:->4}-┼-{:->18}-┼-{:->18}-┼-{:->18}-┼-{:->18}",
-                "", "", "", "", ""
+                "{:->4}-┼-{:->18}-┼-{:->18}",
+                "", "", ""
             );
 
             for bits in 1u8..=32 {
                 // space = 2^(bits-1) because MSB is always 1
                 let space: f64 = 2f64.powi(bits as i32 - 1); // 2^(n-1) candidates
 
-                // Systematic search: divide space among threads, worst case is entire partition
-                let systematic_work = (space / threads as f64).max(1.0);
-                let systematic_secs = systematic_work * thread_avg_time;
+                // Systematic search: divide space among threads
+                let systematic_worst_work = (space / threads as f64).max(1.0); // worst case: entire partition
+                let systematic_avg_work = (space / (2.0 * threads as f64)).max(1.0); // average case: half partition
+                let systematic_worst_secs = systematic_worst_work * thread_avg_time;
+                let systematic_avg_secs = systematic_avg_work * thread_avg_time;
 
-                // Random search: expected trials = space/2, but distributed among threads
-                let random_expected_work = (space / (2.0 * threads as f64)).max(1.0);
-                let random_expected_secs = random_expected_work * thread_avg_time;
-                let random_99th_secs = random_expected_secs * percentile_multiplier(0.99);
-                let random_999th_secs = random_expected_secs * percentile_multiplier(0.999);
-
-                let systematic_human = pretty(systematic_secs);
-                let random_human = pretty(random_expected_secs);
-                let random_99th_human = pretty(random_99th_secs);
-                let random_999th_human = pretty(random_999th_secs);
+                let systematic_worst_human = pretty(systematic_worst_secs);
+                let systematic_avg_human = pretty(systematic_avg_secs);
                 eprintln!(
-                    "{bits:>4} │ {systematic_human:>18} │ {random_human:>18} │ {random_99th_human:>18} │ {random_999th_human:>18}"
+                    "{bits:>4} │ {systematic_worst_human:>18} │ {systematic_avg_human:>18}"
                 );
             }
 
-            eprintln!("\nSearch strategy explanation:");
-            eprintln!(
-                "• Systematic search: Partitions search space among threads (worst-case time shown)"
-            );
-            eprintln!(
-                "• Random search: Each thread picks candidates randomly (follows geometric distribution)"
-            );
-            eprintln!("\nRandom search variance:");
-            eprintln!(
-                "• 50th percentile (median): ~{:.1}× expected time",
-                percentile_multiplier(0.50)
-            );
-            eprintln!(
-                "• 90th percentile: ~{:.1}× expected time",
-                percentile_multiplier(0.90)
-            );
-            eprintln!(
-                "• 99th percentile: ~{:.1}× expected time",
-                percentile_multiplier(0.99)
-            );
-            eprintln!(
-                "• 99.9th percentile: ~{:.1}× expected time",
-                percentile_multiplier(0.999)
-            );
+            eprintln!("\nSystematic search explanation:");
+            eprintln!("• Worst-case: One thread gets unlucky and searches entire partition");
+            eprintln!("• Average case: Threads find target halfway through their partitions");
+            eprintln!("• No variance: Deterministic partitioning means predictable bounds");
+            eprintln!("\nFor random search with percentiles, see the README table comparing");
+            eprintln!("systematic (16 threads) vs random search (2048 threads)");
         }
         Commands::GenerateSalt { output } => {
             ensure_file_does_not_exists(&output, "output file already exists")?;
