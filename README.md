@@ -123,6 +123,20 @@ All commands share the Argon2id cost flags. For release mode we have:
 
 ## Brute‑force search time estimation
 
+### Understanding the Time Estimates
+
+**Search space**: For n-bit preimages, there are 2^(n-1) possible candidates (MSB always 1).
+
+**Expected trials**:
+- Systematic search: 2^(n-2) trials (exactly half the space)
+- Random search: 2^(n-1) trials (due to replacement/duplicates)
+
+**Wall-clock time** = (Expected trials × Time per trial) / Number of threads
+
+The table below shows realistic scenarios:
+- Desktop (16 threads): Limited by available cores
+- Cluster (2048 threads): Limited by coordination overhead
+
 **Assumptions**
 
 * Preimages are uniformly from [2<sup>n-1</sup>, 2<sup>n</sup>), i.e. the most‑significant bit is **always 1**. Every candidate truly has *n* bits; the search‑space size is therefore 2<sup>n‑1</sup>
@@ -164,20 +178,27 @@ All commands share the Argon2id cost flags. For release mode we have:
 | 31   | 65 y 297 d                               | 182 d                                       | 182 d         | 2 y 105 d           | 3 y 157 d           |
 | 32   | 131 y 228 d                              | 364 d                                       | 364 d         | 4 y 212 d           | 6 y 318 d           |
 
+
 ## Understanding Random Search Variance
 
 Random search follows a geometric distribution with high variance. While the table shows expected times, actual recovery can vary significantly:
 
-* **50% chance** of finding the key in ~0.7× the expected time
-* **90% chance** it will take longer than ~2.3× the expected time  
-* **99% chance** it will take longer than ~4.6× the expected time
+**⚠️ Important**: The random search times shown are averages. Due to the geometric distribution:
+- 50% chance of finding by 0.69× the shown time
+- 10% chance of taking more than 2.3× the shown time  
+- 1% chance of taking more than 4.6× the shown time
+
+Systematic search has no variance—it will find the key in exactly the expected time.
 
 For planning purposes, consider the 99th percentile times shown in the table above to understand worst-case scenarios.
 
 **Interpretation**
 
-* **Single machine** (16 threads): we partition the space, so duplicates never happen.  Expected time is exactly half the random search.
-* **Cluster** (2048 threads): different machines choose ranges independently; occasional overlaps mean the average time is the same as pure random sampling.
+* **Single machine (16 threads)**: Systematic search partitions the space among threads, eliminating duplicates. Each thread searches a distinct range, guaranteeing the key will be found after searching exactly half the total space on average.
+
+* **Cluster (2048 threads)**: Random search where each machine independently selects candidates. The 128× increase in threads (2048 vs 16) compensates for occasional duplicate work, resulting in much faster wall-clock time despite the same expected number of trials.
+
+* **Key insight**: With equal thread counts, systematic search would complete in half the time of random search due to no duplicates. The table shows different thread counts to reflect realistic deployment scenarios.
 
 
 ### Real world example using the `benchmark` command
@@ -188,55 +209,55 @@ Starting benchmark with 1 iterations across 16 threads...
 
 Benchmark results:
 Threads: 16
-Total time: 30.51s
+Total time: 35.48s
 Total iterations: 16
-Global average time per derivation: 1907.07ms
-Global derivations per second: 0.52
-Thread average time per derivation: 30.51s
+Global average time per derivation: 2217.33ms
+Global derivations per second: 0.45
+Thread average time per derivation: 35.48s
 Thread derivations per second: 0.03
 
 Estimated time to brute-force one preimage/key pair:
 Note: This benchmark uses 16 threads with systematic search
 For comparison with random search percentiles, see README table
 
-bits │ systematic (worst) │   systematic (avg)
+bits │ systematic (worst) │ systematic (expected)
 -----┼--------------------┼-------------------
-   1 │                31s │                31s
-   2 │                31s │                31s
-   3 │                31s │                31s
-   4 │                31s │                31s
-   5 │                31s │                31s
-   6 │            1min 1s │                31s
-   7 │            2min 2s │            1min 1s
-   8 │            4min 4s │            2min 2s
-   9 │            8min 8s │            4min 4s
-  10 │          16min 16s │            8min 8s
-  11 │          32min 33s │          16min 16s
-  12 │            1h 5min │          32min 33s
-  13 │           2h 10min │            1h 5min
-  14 │           4h 20min │           2h 10min
-  15 │           8h 41min │           4h 20min
-  16 │          17h 22min │           8h 41min
-  17 │             1d 11h │          17h 22min
-  18 │             2d 21h │             1d 11h
-  19 │             5d 19h │             2d 21h
-  20 │            11d 14h │             5d 19h
-  21 │             23d 3h │            11d 14h
-  22 │             46d 7h │             23d 3h
-  23 │            92d 14h │             46d 7h
-  24 │            185d 4h │            92d 14h
-  25 │              1y 5d │            185d 4h
-  26 │             2y 10d │              1y 5d
-  27 │             4y 20d │             2y 10d
-  28 │             8y 41d │             4y 20d
-  29 │            16y 81d │             8y 41d
-  30 │           32y 162d │            16y 81d
-  31 │           64y 324d │           32y 162d
-  32 │          129y 283d │           64y 324d
+   1 │                35s │                35s
+   2 │                35s │                35s
+   3 │                35s │                35s
+   4 │                35s │                35s
+   5 │                35s │                35s
+   6 │           1min 11s │                35s
+   7 │           2min 22s │           1min 11s
+   8 │           4min 44s │           2min 22s
+   9 │           9min 28s │           4min 44s
+  10 │          18min 55s │           9min 28s
+  11 │          37min 51s │          18min 55s
+  12 │           1h 16min │          37min 51s
+  13 │           2h 31min │           1h 16min
+  14 │            5h 3min │           2h 31min
+  15 │           10h 5min │            5h 3min
+  16 │          20h 11min │           10h 5min
+  17 │             1d 16h │          20h 11min
+  18 │              3d 9h │             1d 16h
+  19 │             6d 17h │              3d 9h
+  20 │            13d 11h │             6d 17h
+  21 │            26d 22h │            13d 11h
+  22 │            53d 20h │            26d 22h
+  23 │           107d 15h │            53d 20h
+  24 │            215d 7h │           107d 15h
+  25 │             1y 66d │            215d 7h
+  26 │            2y 131d │             1y 66d
+  27 │            4y 262d │            2y 131d
+  28 │            9y 159d │            4y 262d
+  29 │           18y 319d │            9y 159d
+  30 │           37y 273d │           18y 319d
+  31 │           75y 181d │           37y 273d
+  32 │          150y 362d │           75y 181d
 
 Systematic search explanation:
 • Worst-case: One thread gets unlucky and searches entire partition
-• Average case: Threads find target halfway through their partitions
+• Expected case: Threads find target halfway through their partitions on average
 • No variance: Deterministic partitioning means predictable bounds
 
 For random search with percentiles, see the README table comparing

@@ -124,6 +124,20 @@ enum Commands {
         #[arg(short, long, help = STDOUT_HELP)]
         output: PathBuf,
     },
+    /// Estimate brute-force search times for different bit lengths given average derivation time
+    Estimation {
+        /// Average derivation time in seconds
+        #[arg(short, long)]
+        avg_time_secs: f64,
+
+        /// Number of threads
+        #[arg(short, long)]
+        threads: usize,
+
+        /// Maximum bit length to calculate
+        #[arg(long, default_value_t = 32)]
+        max_bits: u8,
+    },
 }
 
 #[derive(serde::Serialize)]
@@ -370,31 +384,78 @@ fn main() -> anyhow::Result<()> {
             eprintln!();
             eprintln!(
                 "{:>4} │ {:>18} │ {:>18}",
-                "bits", "systematic (worst)", "systematic (avg)"
+                "bits", "systematic (worst)", "systematic (expected)"
             );
             eprintln!("{:->4}-┼-{:->18}-┼-{:->18}", "", "", "");
 
             for bits in 1u8..=32 {
-                // space = 2^(bits-1) because MSB is always 1
-                let space: f64 = 2f64.powi(bits as i32 - 1); // 2^(n-1) candidates
-
-                // Systematic search: divide space among threads
-                let systematic_worst_work = (space / threads as f64).max(1.0); // worst case: entire partition
-                let systematic_avg_work = (space / (2.0 * threads as f64)).max(1.0); // average case: half partition
-                let systematic_worst_secs = systematic_worst_work * thread_avg_time;
-                let systematic_avg_secs = systematic_avg_work * thread_avg_time;
+                let space = calculate_search_space(bits);
+                let (systematic_expected_secs, systematic_worst_secs) =
+                    calculate_systematic_times(space, threads, thread_avg_time);
 
                 let systematic_worst_human = pretty(systematic_worst_secs);
-                let systematic_avg_human = pretty(systematic_avg_secs);
-                eprintln!("{bits:>4} │ {systematic_worst_human:>18} │ {systematic_avg_human:>18}");
+                let systematic_expected_human = pretty(systematic_expected_secs);
+                eprintln!(
+                    "{bits:>4} │ {systematic_worst_human:>18} │ {systematic_expected_human:>18}"
+                );
             }
 
             eprintln!("\nSystematic search explanation:");
             eprintln!("• Worst-case: One thread gets unlucky and searches entire partition");
-            eprintln!("• Average case: Threads find target halfway through their partitions");
+            eprintln!(
+                "• Expected case: Threads find target halfway through their partitions on average"
+            );
             eprintln!("• No variance: Deterministic partitioning means predictable bounds");
             eprintln!("\nFor random search with percentiles, see the README table comparing");
             eprintln!("systematic (16 threads) vs random search (2048 threads)");
+        }
+        Commands::Estimation {
+            avg_time_secs,
+            threads,
+            max_bits,
+        } => {
+            eprintln!("Time estimation for different bit lengths:");
+            eprintln!("Average derivation time: {avg_time_secs:.2}s");
+            eprintln!("Thread count: {threads}");
+            eprintln!();
+
+            eprintln!(
+                "bits │ systematic-{threads}t │ systematic-{threads}t │ random-{threads}t │ random-{threads}t │ random-{threads}t"
+            );
+            eprintln!(
+                "     │ (expected)     │ (worst case)   │ (expected)│ (99th %)  │ (99.9th %)"
+            );
+            eprintln!(
+                "-----┼----------------┼----------------┼-----------┼-----------┼------------"
+            );
+
+            for bits in 1u8..=max_bits {
+                let result = calculate_estimation_for_bits(bits, threads, avg_time_secs);
+
+                let systematic_expected_human = pretty(result.systematic_expected_secs);
+                let systematic_worst_human = pretty(result.systematic_worst_secs);
+                let random_expected_human = pretty(result.random_expected_secs);
+                let random_99th_human = pretty(result.random_99th_percentile_secs);
+                let random_999th_human = pretty(result.random_999th_percentile_secs);
+
+                eprintln!(
+                    "{bits:>4} │ {systematic_expected_human:>14} │ {systematic_worst_human:>14} │ {random_expected_human:>9} │ {random_99th_human:>9} │ {random_999th_human:>10}"
+                );
+            }
+
+            eprintln!();
+            eprintln!("Explanation:");
+            eprintln!(
+                "• Systematic (expected): Average case with {threads} threads, each searching half their partition"
+            );
+            eprintln!(
+                "• Systematic (worst): One thread searches entire partition of 2^(n-1) / {threads} candidates"
+            );
+            eprintln!(
+                "• Random (expected): {threads} threads with expected 2^(n-1) / {threads} trials per thread"
+            );
+            eprintln!("• Random (99th %): 99% chance completion is faster than this");
+            eprintln!("• Random (99.9th %): 99.9% chance completion is faster than this");
         }
         Commands::GenerateSalt { output } => {
             ensure_file_does_not_exists(&output, "output file already exists")?;
@@ -489,11 +550,75 @@ fn percentile_multiplier(percentile: f64) -> f64 {
     -((1.0 - percentile).ln())
 }
 
+/// Estimation results for a given bit length
+#[derive(Debug, PartialEq)]
+pub struct EstimationResult {
+    pub systematic_expected_secs: f64,
+    pub systematic_worst_secs: f64,
+    pub random_expected_secs: f64,
+    pub random_99th_percentile_secs: f64,
+    pub random_999th_percentile_secs: f64,
+}
+
+/// Calculate search space size for n-bit preimages
+/// Returns 2^(n-1) since MSB is always 1
+pub fn calculate_search_space(bits: u8) -> f64 {
+    2f64.powi(bits as i32 - 1)
+}
+
+/// Calculate systematic search times
+pub fn calculate_systematic_times(space: f64, threads: usize, avg_time_secs: f64) -> (f64, f64) {
+    let expected_work = (space / (2.0 * threads as f64)).max(1.0); // average case: half partition
+    let worst_work = (space / threads as f64).max(1.0); // worst case: entire partition
+
+    let expected_secs = expected_work * avg_time_secs;
+    let worst_secs = worst_work * avg_time_secs;
+
+    (expected_secs, worst_secs)
+}
+
+/// Calculate random search times with percentiles
+pub fn calculate_random_times(space: f64, threads: usize, avg_time_secs: f64) -> (f64, f64, f64) {
+    let work_per_thread = space / threads as f64; // expected trials per thread
+    let expected_secs = work_per_thread * avg_time_secs;
+
+    // Random search percentiles (geometric distribution)
+    // For geometric distribution: percentile multiplier = -ln(1 - p)
+    let p99_multiplier = -0.01_f64.ln(); // ≈ 4.605
+    let p999_multiplier = -0.001_f64.ln(); // ≈ 6.908
+
+    let p99_secs = expected_secs * p99_multiplier;
+    let p999_secs = expected_secs * p999_multiplier;
+
+    (expected_secs, p99_secs, p999_secs)
+}
+
+/// Calculate all estimation results for a given bit length
+pub fn calculate_estimation_for_bits(
+    bits: u8,
+    threads: usize,
+    avg_time_secs: f64,
+) -> EstimationResult {
+    let space = calculate_search_space(bits);
+    let (systematic_expected, systematic_worst) =
+        calculate_systematic_times(space, threads, avg_time_secs);
+    let (random_expected, random_99th, random_999th) =
+        calculate_random_times(space, threads, avg_time_secs);
+
+    EstimationResult {
+        systematic_expected_secs: systematic_expected,
+        systematic_worst_secs: systematic_worst,
+        random_expected_secs: random_expected,
+        random_99th_percentile_secs: random_99th,
+        random_999th_percentile_secs: random_999th,
+    }
+}
+
 fn pretty(secs: f64) -> String {
     const MIN: f64 = 60.0;
     const H: f64 = 60.0 * MIN;
     const D: f64 = 24.0 * H;
-    const Y: f64 = 365.25 * D; // calendar‐year approximation
+    const Y: f64 = 365.0 * D; // year approximation (365 days)
 
     // pick the main unit and how much time is left over
     let (whole, unit, rest) = if secs < MIN {
@@ -522,4 +647,148 @@ fn pretty(secs: f64) -> String {
     };
 
     format!("{whole:.0}{unit}{second}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_search_space() {
+        assert_eq!(calculate_search_space(1), 1.0); // 2^0 = 1
+        assert_eq!(calculate_search_space(2), 2.0); // 2^1 = 2
+        assert_eq!(calculate_search_space(3), 4.0); // 2^2 = 4
+        assert_eq!(calculate_search_space(4), 8.0); // 2^3 = 8
+        assert_eq!(calculate_search_space(20), 524288.0); // 2^19 = 524,288
+    }
+
+    #[test]
+    fn test_calculate_systematic_times() {
+        let space = 524288.0; // 20-bit space
+        let threads = 16;
+        let avg_time = 30.0;
+
+        let (expected, worst) = calculate_systematic_times(space, threads, avg_time);
+
+        // Expected: space / (2 * threads) * avg_time = 524288 / 32 * 30 = 491520 seconds
+        assert_eq!(expected, 491520.0);
+
+        // Worst: space / threads * avg_time = 524288 / 16 * 30 = 983040 seconds
+        assert_eq!(worst, 983040.0);
+
+        // Worst should be exactly 2x expected
+        assert_eq!(worst, expected * 2.0);
+    }
+
+    #[test]
+    fn test_calculate_random_times() {
+        let space = 524288.0; // 20-bit space
+        let threads = 16;
+        let avg_time = 30.0;
+
+        let (expected, p99, p999) = calculate_random_times(space, threads, avg_time);
+
+        // Expected: space / threads * avg_time = 524288 / 16 * 30 = 983040 seconds
+        assert_eq!(expected, 983040.0);
+
+        // Check percentile multipliers are approximately correct
+        let p99_multiplier = p99 / expected;
+        let p999_multiplier = p999 / expected;
+
+        // 99th percentile: -ln(0.01) ≈ 4.605
+        assert!((p99_multiplier - 4.605).abs() < 0.001);
+
+        // 99.9th percentile: -ln(0.001) ≈ 6.908
+        assert!((p999_multiplier - 6.908).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_calculate_estimation_for_bits_20bit() {
+        let result = calculate_estimation_for_bits(20, 16, 30.0);
+
+        // Test known values for 20-bit search with 16 threads and 30s per derivation
+        assert_eq!(result.systematic_expected_secs, 491520.0); // 5d 17h
+        assert_eq!(result.systematic_worst_secs, 983040.0); // 11d 9h
+        assert_eq!(result.random_expected_secs, 983040.0); // 11d 9h
+
+        // Random search should have higher percentiles
+        assert!(result.random_99th_percentile_secs > result.random_expected_secs);
+        assert!(result.random_999th_percentile_secs > result.random_99th_percentile_secs);
+
+        // Systematic expected should be half of systematic worst
+        assert_eq!(
+            result.systematic_expected_secs * 2.0,
+            result.systematic_worst_secs
+        );
+
+        // Random expected should equal systematic worst (same thread count)
+        assert_eq!(result.random_expected_secs, result.systematic_worst_secs);
+    }
+
+    #[test]
+    fn test_calculate_estimation_for_bits_scaling() {
+        let result_1t = calculate_estimation_for_bits(20, 1, 30.0);
+        let result_16t = calculate_estimation_for_bits(20, 16, 30.0);
+
+        // With 16x more threads, times should be 16x smaller
+        assert_eq!(
+            result_1t.systematic_expected_secs,
+            result_16t.systematic_expected_secs * 16.0
+        );
+        assert_eq!(
+            result_1t.systematic_worst_secs,
+            result_16t.systematic_worst_secs * 16.0
+        );
+        assert_eq!(
+            result_1t.random_expected_secs,
+            result_16t.random_expected_secs * 16.0
+        );
+    }
+
+    #[test]
+    fn test_pretty_time_formatting() {
+        assert_eq!(pretty(15728640.0), "182d 1h"); // 20-bit random expected
+        assert_eq!(pretty(491520.0), "5d 17h"); // 20-bit systematic expected
+        assert_eq!(pretty(983040.0), "11d 9h"); // 20-bit systematic worst
+
+        // Test edge cases
+        assert_eq!(pretty(30.0), "30s");
+        assert_eq!(pretty(60.0), "1min 0s");
+        assert_eq!(pretty(3600.0), "1h 0min");
+        assert_eq!(pretty(86400.0), "1d 0h");
+        assert_eq!(pretty(31536000.0), "1y 0d"); // 365 * 24 * 3600
+    }
+
+    #[test]
+    fn test_percentile_multipliers_precision() {
+        let p99_multiplier = -0.01_f64.ln();
+        let p999_multiplier = -0.001_f64.ln();
+
+        assert!((p99_multiplier - 4.605).abs() < 0.001);
+        assert!((p999_multiplier - 6.908).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_benchmark_and_estimation_consistency() {
+        // Both benchmark and estimation should use the same calculation functions
+        // This test ensures they produce identical results for the same inputs
+        let bits = 20;
+        let threads = 16;
+        let measured_time = 31.5; // Simulated benchmark measurement
+
+        // What benchmark command would calculate
+        let space = calculate_search_space(bits);
+        let (benchmark_expected, benchmark_worst) =
+            calculate_systematic_times(space, threads, measured_time);
+
+        // What estimation command would calculate with the same inputs
+        let estimation_result = calculate_estimation_for_bits(bits, threads, measured_time);
+
+        // They should be identical
+        assert_eq!(
+            benchmark_expected,
+            estimation_result.systematic_expected_secs
+        );
+        assert_eq!(benchmark_worst, estimation_result.systematic_worst_secs);
+    }
 }
