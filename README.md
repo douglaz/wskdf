@@ -22,6 +22,27 @@ See `scripts/complex-scheme.sh` for a related example.
 
 ---
 
+## Setup
+
+If you're using rustup, it's recommended to add the musl target for static compilation:
+
+```bash
+$ rustup target add x86_64-unknown-linux-musl
+```
+
+Then build with the alkali feature flag for best performance:
+
+```bash
+$ cargo build --release -F alkali --target x86_64-unknown-linux-musl
+```
+
+Alternatively, you can use the provided Nix flake which automatically sets up the musl environment:
+
+```bash
+$ nix develop
+$ cargo build --release -F alkali --target x86_64-unknown-linux-musl
+```
+
 ## CLI quick‑start
 
 Note: salt is a hex encoded string of 16 bytes. It's good enough to generate it once and reuse for multiple keys. You can generate with:
