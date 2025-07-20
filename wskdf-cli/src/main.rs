@@ -378,36 +378,48 @@ fn main() -> anyhow::Result<()> {
             eprintln!("Thread average time per derivation: {thread_avg_time:.2?}s");
             eprintln!("Thread derivations per second: {thread_derivations_per_second:.2?}");
 
-            eprintln!("\nEstimated time to brute-force one preimage/key pair:");
-            eprintln!("Note: This benchmark uses {threads} threads with systematic search");
-            eprintln!("For comparison with random search percentiles, see README table");
+            eprintln!("\nEstimated time to brute-force with measured derivation time:");
+            eprintln!("Average derivation time: {thread_avg_time:.2}s");
+            eprintln!("Thread count: {threads}");
             eprintln!();
+
             eprintln!(
-                "{:>4} │ {:>18} │ {:>18}",
-                "bits", "systematic (worst)", "systematic (expected)"
+                "bits │ systematic-{threads}t │ systematic-{threads}t │ random-{threads}t │ random-{threads}t │ random-{threads}t"
             );
-            eprintln!("{:->4}-┼-{:->18}-┼-{:->18}", "", "", "");
+            eprintln!(
+                "     │ (expected)     │ (worst case)   │ (expected)│ (99th %)  │ (99.9th %)"
+            );
+            eprintln!(
+                "-----┼----------------┼----------------┼-----------┼-----------┼------------"
+            );
 
             for bits in 1u8..=32 {
-                let space = calculate_search_space(bits);
-                let (systematic_expected_secs, systematic_worst_secs) =
-                    calculate_systematic_times(space, threads, thread_avg_time);
+                let result = calculate_estimation_for_bits(bits, threads, thread_avg_time);
 
-                let systematic_worst_human = pretty(systematic_worst_secs);
-                let systematic_expected_human = pretty(systematic_expected_secs);
+                let systematic_expected_human = pretty(result.systematic_expected_secs);
+                let systematic_worst_human = pretty(result.systematic_worst_secs);
+                let random_expected_human = pretty(result.random_expected_secs);
+                let random_99th_human = pretty(result.random_99th_percentile_secs);
+                let random_999th_human = pretty(result.random_999th_percentile_secs);
+
                 eprintln!(
-                    "{bits:>4} │ {systematic_worst_human:>18} │ {systematic_expected_human:>18}"
+                    "{bits:>4} │ {systematic_expected_human:>14} │ {systematic_worst_human:>14} │ {random_expected_human:>9} │ {random_99th_human:>9} │ {random_999th_human:>10}"
                 );
             }
 
-            eprintln!("\nSystematic search explanation:");
-            eprintln!("• Worst-case: One thread gets unlucky and searches entire partition");
+            eprintln!();
+            eprintln!("Explanation:");
             eprintln!(
-                "• Expected case: Threads find target halfway through their partitions on average"
+                "• Systematic (expected): Average case with {threads} threads, each searching half their partition"
             );
-            eprintln!("• No variance: Deterministic partitioning means predictable bounds");
-            eprintln!("\nFor random search with percentiles, see the README table comparing");
-            eprintln!("systematic (16 threads) vs random search (2048 threads)");
+            eprintln!(
+                "• Systematic (worst): One thread searches entire partition of 2^(n-1) / {threads} candidates"
+            );
+            eprintln!(
+                "• Random (expected): {threads} threads with expected 2^(n-1) / {threads} trials per thread"
+            );
+            eprintln!("• Random (99th %): 99% chance completion is faster than this");
+            eprintln!("• Random (99.9th %): 99.9% chance completion is faster than this");
         }
         Commands::Estimation {
             avg_time_secs,
@@ -580,7 +592,11 @@ pub fn calculate_systematic_times(space: f64, threads: usize, avg_time_secs: f64
 /// Calculate random search times with percentiles
 pub fn calculate_random_times(space: f64, threads: usize, avg_time_secs: f64) -> (f64, f64, f64) {
     let work_per_thread = space / threads as f64; // expected trials per thread
-    let expected_secs = work_per_thread * avg_time_secs;
+    let expected_secs = if space > 0.0 {
+        (work_per_thread * avg_time_secs).max(avg_time_secs)
+    } else {
+        0.0
+    };
 
     // Random search percentiles (geometric distribution)
     // For geometric distribution: percentile multiplier = -ln(1 - p)

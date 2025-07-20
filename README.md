@@ -147,37 +147,37 @@ The table below shows realistic scenarios:
   * 🖥️ **16 threads** (e.g. 16-core/64GB RAM desktop machine)
   * 🏭 **2048 threads** (e.g. 64×32-core/128GB RAM machines on some cloud provider)
 
-| Bits | 16 threads 🖥️<br>(**systematic search**) | 2048 threads 🏭<br>(**systematic search**) | 2048 threads 🏭<br>(**random search**) |                   |                     |
-|------|------------------------------------------|---------------------------------------------|----------------------------------------|-------------------|---------------------|
-|      | Worst-case time                          | Worst-case time                             | Expected time | 99th percentile     | 99.9th percentile   |
-| 1‑5  | 30 s                                     | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
-| 6    | 1 min 0 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
-| 7    | 2 min 0 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
-| 8    | 4 min 8 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
-| 9    | 8 min 0 s                                | 30 s                                        | 30 s          | 2 min 19 s          | 3 min 27 s          |
-| 10   | 16 min 30 s                              | 30 s                                        | 31 s          | 2 min 23 s          | 3 min 33 s          |
-| 11   | 33 min 1 s                               | 30 s                                        | 35 s          | 2 min 41 s          | 4 min 1 s           |
-| 12   | 1 h 6 min                                | 30 s                                        | 47 s          | 3 min 36 s          | 5 min 24 s          |
-| 13   | 2 h 12 min                               | 1 min 0 s                                   | 1 min 17 s    | 5 min 55 s          | 8 min 53 s          |
-| 14   | 4 h 24 min                               | 2 min 0 s                                   | 2 min 17 s    | 10 min 31 s         | 15 min 47 s         |
-| 15   | 8 h 48 min                               | 4 min 0 s                                   | 4 min 17 s    | 19 min 44 s         | 29 min 36 s         |
-| 16   | 17 h 36 min                              | 8 min 0 s                                   | 8 min 20 s    | 38 min 24 s         | 57 min 36 s         |
-| 17   | 1 d 11 h                                 | 16 min 0 s                                  | 16 min 19 s   | 1 h 15 m            | 1 h 52 m            |
-| 18   | 2 d 22 h                                 | 32 min 0 s                                  | 32 min 20 s   | 2 h 29 m            | 3 h 43 m            |
-| 19   | 5 d 21 h                                 | 1 h 4 m                                     | 1 h 4 m       | 4 h 55 m            | 7 h 22 m            |
-| 20   | 11 d 9 h                                 | 2 h 8 m                                     | 2 h 8 m       | 9 h 52 m            | 14 h 48 m           |
-| 21   | 23 d 11 h                                | 4 h 16 m                                    | 4 h 16 m      | 19 h 44 m           | 1 d 5 h             |
-| 22   | 46 d 23 h                                | 8 h 32 m                                    | 8 h 32 m      | 1 d 15 h            | 2 d 11 h            |
-| 23   | 91 d 1 h                                 | 17 h 4 m                                    | 17 h 4 m      | 3 d 6 h             | 4 d 21 h            |
-| 24   | 182 d 1 h                                | 1 d 10 h                                    | 1 d 10 h      | 6 d 13 h            | 9 d 18 h            |
-| 25   | 364 d 2 h                                | 2 d 20 h                                    | 2 d 20 h      | 13 d 2 h            | 19 d 12 h           |
-| 26   | 728 d 4 h                                | 5 d 17 h                                    | 5 d 17 h      | 26 d 1 h            | 39 d 1 h            |
-| 27   | 1456 d 8 h                               | 11 d 9 h                                    | 11 d 9 h      | 52 d 4 h            | 78 d 6 h            |
-| 28   | 8 y 83 d                                 | 22 d 18 h                                   | 22 d 18 h     | 104 d 8 h           | 156 d 12 h          |
-| 29   | 16 y 165 d                               | 45 d 12 h                                   | 45 d 12 h     | 208 d 16 h          | 312 d 24 h          |
-| 30   | 32 y 331 d                               | 91 d                                        | 91 d          | 417 d 8 h           | 1 y 261 d           |
-| 31   | 65 y 297 d                               | 182 d                                       | 182 d         | 2 y 105 d           | 3 y 157 d           |
-| 32   | 131 y 228 d                              | 364 d                                       | 364 d         | 4 y 212 d           | 6 y 318 d           |
+| Bits | 16 threads 🖥️<br>(**systematic search**) | 2048 threads 🏭<br>(**systematic search**) | 2048 threads 🏭<br>(**random search**) |                       |                       |
+|------|------------------------------------------|---------------------------------------------|----------------------------------------|-----------------------|-----------------------|
+|      | Worst-case time                          | Worst-case time                             | Expected time                          | 99th percentile       | 99.9th percentile     |
+| 1-5  | 30 s                                     | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 6    | 1 min 0 s                                | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 7    | 2 min 0 s                                | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 8    | 4 min 0 s                                | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 9    | 8 min 0 s                                | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 10   | 16 min 0 s                               | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 11   | 32 min 0 s                               | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 12   | 1 h 4 min                                | 30 s                                        | 30 s                                   | 2 min 18 s            | 3 min 27 s            |
+| 13   | 2 h 8 min                                | 1 min 0 s                                   | 1 min 0 s                              | 4 min 36 s            | 6 min 54 s            |
+| 14   | 4 h 16 min                               | 2 min 0 s                                   | 2 min 0 s                              | 9 min 13 s            | 13 min 49 s           |
+| 15   | 8 h 32 min                               | 4 min 0 s                                   | 4 min 0 s                              | 18 min 25 s           | 27 min 38 s           |
+| 16   | 17 h 4 min                               | 8 min 0 s                                   | 8 min 0 s                              | 36 min 50 s           | 55 min 16 s           |
+| 17   | 1 d 10 h                                 | 16 min 0 s                                  | 16 min 0 s                             | 1 h 14 min            | 1 h 51 min            |
+| 18   | 2 d 20 h                                 | 32 min 0 s                                  | 32 min 0 s                             | 2 h 27 min            | 3 h 41 min            |
+| 19   | 5 d 17 h                                 | 1 h 4 min                                   | 1 h 4 min                              | 4 h 55 min            | 7 h 22 min            |
+| 20   | 11 d 9 h                                 | 2 h 8 min                                   | 2 h 8 min                              | 9 h 49 min            | 14 h 44 min           |
+| 21   | 22 d 18 h                                | 4 h 16 min                                  | 4 h 16 min                             | 19 h 39 min           | 1 d 5 h               |
+| 22   | 45 d 12 h                                | 8 h 32 min                                  | 8 h 32 min                             | 1 d 15 h              | 2 d 11 h              |
+| 23   | 91 d 0 h                                 | 17 h 4 min                                  | 17 h 4 min                             | 3 d 7 h               | 4 d 22 h              |
+| 24   | 182 d 0 h                                | 1 d 10 h                                    | 1 d 10 h                               | 6 d 13 h              | 9 d 20 h              |
+| 25   | 364 d 0 h                                | 2 d 20 h                                    | 2 d 20 h                               | 13 d 2 h              | 19 d 16 h             |
+| 26   | 1 y 363 d                                | 5 d 17 h                                    | 5 d 17 h                               | 26 d 5 h              | 39 d 7 h              |
+| 27   | 3 y 361 d                                | 11 d 9 h                                    | 11 d 9 h                               | 52 d 10 h             | 78 d 14 h             |
+| 28   | 7 y 358 d                                | 22 d 18 h                                   | 22 d 18 h                              | 104 d 19 h            | 157 d 5 h             |
+| 29   | 15 y 351 d                               | 45 d 12 h                                   | 45 d 12 h                              | 209 d 14 h            | 314 d 9 h             |
+| 30   | 31 y 338 d                               | 91 d 1 h                                    | 91 d 1 h                               | 1 y 54 d              | 1 y 264 d             |
+| 31   | 63 y 311 d                               | 182 d 1 h                                   | 182 d 1 h                              | 2 y 108 d             | 3 y 163 d             |
+| 32   | 127 y 257 d                              | 364 d 2 h                                   | 364 d 2 h                              | 4 y 217 d             | 6 y 325 d             |
 
 
 ## Understanding Random Search Variance
@@ -203,6 +203,7 @@ For planning purposes, consider the 99th percentile times shown in the table abo
 
 
 ### Real world example using the `benchmark` command
+The following is an **example output**. Run this command on your own hardware to get accurate time estimates for your machine.
 ```bash
 $ cargo run --release -F alkali -- benchmark -i 1 -t 16
 Using 16 threads for benchmark
@@ -210,58 +211,58 @@ Starting benchmark with 1 iterations across 16 threads...
 
 Benchmark results:
 Threads: 16
-Total time: 35.48s
+Total time: 29.63s
 Total iterations: 16
-Global average time per derivation: 2217.33ms
-Global derivations per second: 0.45
-Thread average time per derivation: 35.48s
+Global average time per derivation: 1851.87ms
+Global derivations per second: 0.54
+Thread average time per derivation: 29.63s
 Thread derivations per second: 0.03
 
-Estimated time to brute-force one preimage/key pair:
-Note: This benchmark uses 16 threads with systematic search
-For comparison with random search percentiles, see README table
+Estimated time to brute-force with measured derivation time:
+Average derivation time: 29.63s
+Thread count: 16
 
-bits │ systematic (worst) │ systematic (expected)
------┼--------------------┼-------------------
-   1 │                35s │                35s
-   2 │                35s │                35s
-   3 │                35s │                35s
-   4 │                35s │                35s
-   5 │                35s │                35s
-   6 │           1min 11s │                35s
-   7 │           2min 22s │           1min 11s
-   8 │           4min 44s │           2min 22s
-   9 │           9min 28s │           4min 44s
-  10 │          18min 55s │           9min 28s
-  11 │          37min 51s │          18min 55s
-  12 │           1h 16min │          37min 51s
-  13 │           2h 31min │           1h 16min
-  14 │            5h 3min │           2h 31min
-  15 │           10h 5min │            5h 3min
-  16 │          20h 11min │           10h 5min
-  17 │             1d 16h │          20h 11min
-  18 │              3d 9h │             1d 16h
-  19 │             6d 17h │              3d 9h
-  20 │            13d 11h │             6d 17h
-  21 │            26d 22h │            13d 11h
-  22 │            53d 20h │            26d 22h
-  23 │           107d 15h │            53d 20h
-  24 │            215d 7h │           107d 15h
-  25 │             1y 66d │            215d 7h
-  26 │            2y 131d │             1y 66d
-  27 │            4y 262d │            2y 131d
-  28 │            9y 159d │            4y 262d
-  29 │           18y 319d │            9y 159d
-  30 │           37y 273d │           18y 319d
-  31 │           75y 181d │           37y 273d
-  32 │          150y 362d │           75y 181d
+bits │ systematic-16t │ systematic-16t │ random-16t │ random-16t │ random-16t
+     │ (expected)     │ (worst case)   │ (expected)│ (99th %)  │ (99.9th %)
+-----┼----------------┼----------------┼-----------┼-----------┼------------
+   1 │            30s │            30s │       30s │  2min 16s │   3min 25s
+   2 │            30s │            30s │       30s │  2min 16s │   3min 25s
+   3 │            30s │            30s │       30s │  2min 16s │   3min 25s
+   4 │            30s │            30s │       30s │  2min 16s │   3min 25s
+   5 │            30s │            30s │       30s │  2min 16s │   3min 25s
+   6 │            30s │            59s │       59s │  4min 33s │   6min 49s
+   7 │            59s │       1min 59s │  1min 59s │   9min 6s │  13min 39s
+   8 │       1min 59s │       3min 57s │  3min 57s │ 18min 12s │  27min 17s
+   9 │       3min 57s │       7min 54s │  7min 54s │ 36min 23s │  54min 35s
+  10 │       7min 54s │      15min 48s │ 15min 48s │  1h 13min │   1h 49min
+  11 │      15min 48s │      31min 36s │ 31min 36s │  2h 26min │   3h 38min
+  12 │      31min 36s │        1h 3min │   1h 3min │  4h 51min │   7h 17min
+  13 │        1h 3min │        2h 6min │   2h 6min │  9h 42min │  14h 33min
+  14 │        2h 6min │       4h 13min │  4h 13min │ 19h 24min │      1d 5h
+  15 │       4h 13min │       8h 26min │  8h 26min │    1d 15h │     2d 10h
+  16 │       8h 26min │      16h 51min │ 16h 51min │     3d 6h │     4d 20h
+  17 │      16h 51min │         1d 10h │    1d 10h │    6d 11h │     9d 17h
+  18 │         1d 10h │         2d 19h │    2d 19h │   12d 23h │    19d 10h
+  19 │         2d 19h │         5d 15h │    5d 15h │   25d 21h │    38d 20h
+  20 │         5d 15h │         11d 6h │    11d 6h │   51d 18h │    77d 15h
+  21 │         11d 6h │        22d 11h │   22d 11h │  103d 12h │    155d 6h
+  22 │        22d 11h │        44d 23h │   44d 23h │   207d 0h │   310d 12h
+  23 │        44d 23h │        89d 22h │   89d 22h │    1y 49d │    1y 256d
+  24 │        89d 22h │       179d 19h │  179d 19h │    2y 98d │    3y 147d
+  25 │       179d 19h │       359d 14h │  359d 14h │   4y 196d │    6y 294d
+  26 │       359d 14h │        1y 354d │   1y 354d │    9y 27d │   13y 223d
+  27 │        1y 354d │        3y 343d │   3y 343d │   18y 54d │    27y 81d
+  28 │        3y 343d │        7y 322d │   7y 322d │  36y 108d │   54y 162d
+  29 │        7y 322d │       15y 279d │  15y 279d │  72y 216d │  108y 324d
+  30 │       15y 279d │       31y 192d │  31y 192d │  145y 67d │  217y 283d
+  31 │       31y 192d │        63y 19d │   63y 19d │ 290y 135d │  435y 202d
+  32 │        63y 19d │       126y 38d │  126y 38d │ 580y 269d │   871y 39d
 
-Systematic search explanation:
-• Worst-case: One thread gets unlucky and searches entire partition
-• Expected case: Threads find target halfway through their partitions on average
-• No variance: Deterministic partitioning means predictable bounds
-
-For random search with percentiles, see the README table comparing
-systematic (16 threads) vs random search (2048 threads)
+Explanation:
+• Systematic (expected): Average case with 16 threads, each searching half their partition
+• Systematic (worst): One thread searches entire partition of 2^(n-1) / 16 candidates
+• Random (expected): 16 threads with expected 2^(n-1) / 16 trials per thread
+• Random (99th %): 99% chance completion is faster than this
+• Random (99.9th %): 99.9% chance completion is faster than this
 ```
 ---
