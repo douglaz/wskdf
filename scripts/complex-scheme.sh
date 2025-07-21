@@ -4,10 +4,10 @@ set -Eeuo pipefail
 
 # The first preimage requires patience to derive and is impossible to brute-force
 FIRST_PREIMAGE_NBITS=63
-# if OPS=100 takes 1507s, then for 30 days:
-# >>> 30 * 24 * 3600 / 1507 * 100
-# 171997
-MONTHS_LONG_OPS=172000
+# if OPS=10 takes 60s, then for 30 days:
+# >>> 30 * 24 * 3600 / 60 * 10
+# 432000
+MONTHS_LONG_OPS=432000
 # This is 16GB
 LARGE_MEM_LIMIT_KBYTES=16777216
 
