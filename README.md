@@ -48,7 +48,7 @@ $ cargo build --release -F alkali
 Note: salt is a hex encoded string of 16 bytes. It's good enough to generate it once and reuse for multiple keys. You can generate with:
 ```bash
 $ cargo run -- generate-salt --output salt
-# or for instance:
+# which is similar to:
 $ openssl rand -hex 16
 a228c13efadd4f6435a30d62a998d065
 ```
@@ -142,7 +142,6 @@ The table below shows realistic scenarios:
 * Preimages are uniformly from [2<sup>n-1</sup>, 2<sup>n</sup>), i.e. the most‑significant bit is **always 1**. Every candidate truly has *n* bits; the search‑space size is therefore 2<sup>n‑1</sup>
 * Each candidate costs **30s** to evaluate (Argon2id with the default cost).
 
-
 * Two hardware budgets:
   * 🖥️ **16 threads** (e.g. 16-core/64GB RAM desktop machine)
   * 🏭 **2048 threads** (e.g. 64×32-core/128GB RAM machines on some cloud provider)
@@ -180,18 +179,9 @@ The table below shows realistic scenarios:
 | 32   | 127 y 257 d                              | 364 d 2 h                                   | 364 d 2 h                              | 4 y 217 d             | 6 y 325 d             |
 
 
-## Understanding Random Search Variance
+### Understanding Random Search Variance
 
-Random search follows a geometric distribution with high variance. While the table shows expected times, actual recovery can vary significantly:
-
-**⚠️ Important**: The random search times shown are averages. Due to the geometric distribution:
-- 50% chance of finding by 0.69× the shown time
-- 10% chance of taking more than 2.3× the shown time  
-- 1% chance of taking more than 4.6× the shown time
-
-Systematic search has no variance—it will find the key in exactly the expected time.
-
-For planning purposes, consider the 99th percentile times shown in the table above to understand worst-case scenarios.
+Random search follows a geometric distribution with high variance. For planning purposes, consider the 99th percentile times shown in the table above to understand worst-case scenarios.
 
 **Interpretation**
 
