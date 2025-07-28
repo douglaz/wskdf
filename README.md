@@ -14,11 +14,24 @@
 * **Recoverable** – lose the preimage? Brute‑force time is **predictable** and set by *n* bits and Argon2id cost (see table). You decide whether recovery takes days, weeks or months.
 * **Coercion‑resistant** – stash the preimage **elsewhere**. If forced to hand over the key, you truthfully can’t; an attacker must steal the stash or spend the compute.
 
-### Example application
+### Example application: Coercion-Resistant Vault
 Note: this is just an idea, we don't suggest this scheme as it was **not peer reviewed** and is a very advanced usage
 <img width="3333" height="1215" alt="image" src="https://github.com/user-attachments/assets/4b12e31a-60ef-4b8d-a753-4d500da2e4cc" />
 
-See `scripts/complex-scheme.sh` for a related example.
+This two-layer scheme provides three distinct recovery paths for the final keyfile:
+
+1. **Direct Access (seconds)**: If you have physical access to the second preimage (e.g., stored in a bank vault), you can derive the second key instantly and decrypt the final keyfile.
+
+2. **Computational Recovery (days/weeks)**: If the second preimage is lost, you can brute-force the 24-bit search space. With sufficient computational resources, recovery is expensive but feasible.
+
+3. **Time-Locked Recovery (30 days)**: Using the first preimage, you must wait for the 30-day derivation to complete, decrypt the second preimage, then derive the second key. This path provides guaranteed access but enforces a significant time delay - crucial for coercion resistance.
+
+Under coercion, even if you provide all materials (both preimages, encrypted files, and parameters), an attacker must either:
+- Wait 30 days for the time-locked path, giving authorities time to intervene
+- Spend significant resources on computational recovery
+- Gain physical access to wherever you've stored the second preimage
+
+See `scripts/complex-scheme.sh` for implementation details.
 
 ---
 
@@ -256,3 +269,82 @@ Explanation:
 • Random (99.9th %): 99.9% chance completion is faster than this
 ```
 ---
+
+## Computational Cost Estimation for Brute-Force Recovery
+
+### Coercion-Resistant Vault Example (24-bit second preimage)
+
+The `scripts/complex-scheme.sh` example uses these parameters for the second layer:
+- **Bit length**: 24 bits (16,777,216 possible values, but only 8,388,608 candidates since MSB=1)
+- **Argon2id parameters**: 7 iterations, 4GB memory
+- **Expected derivation time**: ~30 seconds per attempt (on typical hardware)
+
+### Time Requirements
+
+From the benchmark table above, brute-forcing a 24-bit preimage requires:
+- **16 threads** (desktop): 182 days worst-case
+- **128 threads** (single large instance): ~22.7 days expected
+- **2048 threads** (distributed cluster): 1.4 days expected, 6.5 days at 99th percentile
+
+### Cloud Computing Cost Analysis
+
+#### AWS EC2 Pricing (as of 2024)
+For memory-hard operations requiring 4GB per thread:
+
+**Option 1: High-Memory Instances**
+- Instance type: `r6i.32xlarge` (128 vCPUs, 1024 GB RAM)
+- Can run 128 parallel threads (1 per vCPU, each using 4GB RAM)
+- Cost: ~$8.06/hour
+- Time needed: ~22.7 days (with 128 threads)
+- **Total cost: ~$4,390**
+
+**Option 2: Compute-Optimized Cluster**
+- Instance type: `c6i.4xlarge` (16 vCPUs, 32 GB RAM) 
+- Can run 8 parallel threads (limited by RAM: 32GB/4GB = 8)
+- Cost: ~$0.68/hour per instance
+- Need 256 instances for 2048 threads
+- Time needed: ~1.4 days expected
+- **Total cost: ~$5,850** (expected case)
+- **Total cost: ~$27,000** (99th percentile, 6.5 days)
+
+**Option 3: Spot Instances**
+- Using spot pricing can reduce costs by 60-90%
+- Less reliable, may be interrupted
+- **Estimated cost: $1,000-$10,000** depending on availability
+
+#### Other Cloud Providers
+
+**Google Cloud Platform**
+- `n2-highmem-128` (128 vCPUs, 864 GB RAM)
+- Can run 128 parallel threads (1 per vCPU)
+- Cost: ~$6.74/hour
+- Time needed: ~22.7 days
+- **Total cost: ~$3,670**
+
+**Local Hardware Investment**
+- 64-core AMD Threadripper: ~$4,000
+- 256GB RAM: ~$1,000
+- Can run 64 threads continuously
+- Time: ~45 days
+- **One-time cost: ~$5,000** (reusable hardware)
+
+### Cost Factors to Consider
+
+1. **CPU vs Memory Constraints**: Argon2id is CPU-intensive; you can only run one thread per CPU core effectively
+2. **Memory Requirements**: Each thread needs 4GB RAM, which can limit thread count on lower-memory instances
+3. **Spot vs On-Demand**: Spot instances can reduce costs by 60-90% but may be interrupted
+4. **Coordination Overhead**: Managing 2048 threads across 256+ machines requires significant orchestration
+5. **Electricity Costs**: For local hardware, add ~$200-500 for 45 days of operation
+
+### Conclusion
+
+Realistic cost estimates for brute-forcing a 24-bit preimage:
+- **Budget approach**: $1,000-$5,000 using spot instances or local hardware
+- **Fast approach**: $6,000-$30,000 for on-demand cloud computing
+- **Worst case**: Higher costs if extremely unlucky (99.9th percentile)
+
+These costs make brute-force recovery feasible for high-value assets while remaining prohibitively expensive for casual attackers. The actual cost depends heavily on:
+- Current cloud pricing
+- Luck in finding the preimage
+- Available optimization techniques
+- Whether time or money is the primary constraint
