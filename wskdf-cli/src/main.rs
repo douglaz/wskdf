@@ -12,20 +12,53 @@ use wskdf_core::{KEY_SIZE, PREIMAGE_SIZE, SALT_SIZE};
 const DEFAULT_OPS_LIMIT: u32 = 7;
 const DEFAULT_MEM_LIMIT_KBYTES: u32 = 4096 * 1024;
 
-const STDIN_HELP: &str = "Use - for stdin";
-const STDOUT_HELP: &str = "Use - for stdout";
+const MAX_THREADS: usize = 10_000;
+const MAX_ITERATIONS: usize = 1_000_000;
+
+// Validation functions
+fn validate_threads(threads: usize) -> anyhow::Result<()> {
+    ensure!(threads > 0, "threads must be > 0");
+    ensure!(
+        threads <= MAX_THREADS,
+        "threads must be <= {MAX_THREADS} (requested: {threads})"
+    );
+    Ok(())
+}
+
+fn validate_n_bits(n_bits: u8) -> anyhow::Result<()> {
+    ensure!(
+        (1..=63).contains(&n_bits),
+        "n_bits must be between 1 and 63"
+    );
+    Ok(())
+}
+
+fn validate_iterations(iterations: usize) -> anyhow::Result<()> {
+    ensure!(iterations > 0, "iterations must be > 0");
+    ensure!(
+        iterations <= MAX_ITERATIONS,
+        "iterations must be <= {MAX_ITERATIONS} (requested: {iterations})"
+    );
+    Ok(())
+}
 
 #[derive(Clone, clap::Args, serde::Serialize)]
 struct KdfParams {
+    /// Argon2id ops limit (number of iterations)
     #[arg(long, default_value_t = DEFAULT_OPS_LIMIT)]
     ops_limit: u32,
 
+    /// Argon2id memory limit in kilobytes
     #[arg(long, default_value_t = DEFAULT_MEM_LIMIT_KBYTES)]
     mem_limit_kbytes: u32,
 }
 
 #[derive(Clone, clap::Parser)]
-#[command(name = "wskdf", about = "Weak, Slow, Key Derivation Function", long_about = None)]
+#[command(
+    name = "wskdf",
+    about = "Weak, Slow, Key Derivation Function",
+    long_about = "WSKDF creates keys that are fast to derive with the preimage but recoverable by brute-force with predictable CPU time if the preimage is lost. It uses Argon2id for memory-hard key derivation with configurable parameters."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -35,19 +68,24 @@ struct Cli {
 enum Commands {
     /// Outputs a random preimage and the derived key encoded as hex to two files
     OutputRandomKey {
+        /// Number of bits for the preimage (1-63). Higher values mean longer brute-force times
         #[arg(short, long)]
         n_bits: u8,
 
-        #[arg(long, help = STDOUT_HELP)]
+        /// Output file for the hex-encoded preimage (use - for stdout)
+        #[arg(long)]
         preimage_output: PathBuf,
 
-        #[arg(long, help = STDOUT_HELP)]
+        /// Output file for the hex-encoded derived key (use - for stdout)
+        #[arg(long)]
         key_output: PathBuf,
 
-        #[arg(long, help = STDOUT_HELP)]
+        /// Optional output file for KDF parameters in JSON format (use - for stdout)
+        #[arg(long)]
         params_output: Option<PathBuf>,
 
-        #[arg(long, help = STDIN_HELP)]
+        /// Input file containing the hex-encoded 16-byte salt (use - for stdin)
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -55,13 +93,16 @@ enum Commands {
     },
     /// Derives a key from a preimage
     DeriveKey {
-        #[arg(long, help = STDIN_HELP)]
+        /// Input file containing the hex-encoded 8-byte preimage (use - for stdin)
+        #[arg(long)]
         preimage_input: PathBuf,
 
-        #[arg(long, help = STDOUT_HELP)]
+        /// Output file for the hex-encoded derived key (use - for stdout)
+        #[arg(long)]
         key_output: PathBuf,
 
-        #[arg(long, help = STDIN_HELP)]
+        /// Input file containing the hex-encoded 16-byte salt (use - for stdin)
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -71,16 +112,19 @@ enum Commands {
     /// The command should receive one the hex encoded derived key on the stdin.
     /// It should exit with 0 if the key is correct, and non-zero otherwise
     FindKey {
+        /// External command to validate keys. Receives hex-encoded key on stdin, exits 0 if valid
         #[arg(short, long)]
         command: String,
 
-        #[arg(long, help = STDOUT_HELP)]
+        /// Output file for the found hex-encoded preimage (use - for stdout)
+        #[arg(long)]
         preimage_output: PathBuf,
 
-        /// Key output file. If not specified, no key will be written, but it can be derived through preimage
-        #[arg(long, help = STDOUT_HELP)]
+        /// Key output file. If not specified, no key will be written, but it can be derived through preimage (use - for stdout)
+        #[arg(long)]
         key_output: Option<PathBuf>,
 
+        /// Number of bits for the preimage search space (1-63)
         #[arg(short, long)]
         n_bits: u8,
 
@@ -88,7 +132,8 @@ enum Commands {
         #[arg(short, long)]
         threads: usize,
 
-        #[arg(long, help = STDIN_HELP)]
+        /// Input file containing the hex-encoded 16-byte salt (use - for stdin)
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
@@ -96,18 +141,25 @@ enum Commands {
     },
     /// Checks if a preimage derives to a given key. Returns exit code 0 if it does, non-zero otherwise
     CheckPreimage {
-        #[arg(long, help = STDIN_HELP)]
+        /// Input file containing the hex-encoded 32-byte key to verify (use - for stdin)
+        #[arg(long)]
         key_input: PathBuf,
 
-        #[arg(long, help = STDIN_HELP)]
+        /// Input file containing the hex-encoded 8-byte preimage (use - for stdin)
+        #[arg(long)]
         preimage_input: PathBuf,
 
-        #[arg(long, help = STDIN_HELP)]
+        /// Input file containing the hex-encoded 16-byte salt (use - for stdin)
+        #[arg(long)]
         salt_input: PathBuf,
 
         #[clap(flatten)]
         kdf_params: KdfParams,
     },
+    /// Benchmark the key derivation performance with specified parameters
+    ///
+    /// Runs multiple iterations of key derivation across threads to measure
+    /// performance and estimate brute-force times for different bit lengths.
     Benchmark {
         /// Iterations per thread
         #[arg(short, long)]
@@ -120,8 +172,12 @@ enum Commands {
         #[clap(flatten)]
         kdf_params: KdfParams,
     },
+    /// Generate a cryptographically secure random salt
+    ///
+    /// Creates a 16-byte salt encoded as hexadecimal for use with key derivation.
     GenerateSalt {
-        #[arg(short, long, help = STDOUT_HELP)]
+        /// Output file for the hex-encoded 16-byte salt (use - for stdout)
+        #[arg(short, long)]
         output: PathBuf,
     },
     /// Estimate brute-force search times for different bit lengths given average derivation time
@@ -213,7 +269,8 @@ fn main() -> anyhow::Result<()> {
             salt_input,
             kdf_params,
         } => {
-            ensure!(threads > 0, "threads must be > 0");
+            validate_threads(threads)?;
+            validate_n_bits(n_bits)?;
             ensure_file_does_not_exists(&preimage_output, "preimage output file already exists")?;
             if let Some(key_output) = &key_output {
                 ensure_file_does_not_exists(key_output, "key output file already exists")?;
@@ -239,18 +296,21 @@ fn main() -> anyhow::Result<()> {
 
             eprintln!("\nTime estimates for full search:");
             eprintln!(
-                "  50% chance by: {}",
-                pretty(expected_time * percentile_multiplier(0.50))
+                "  50% chance by: {time}",
+                time = pretty(expected_time * percentile_multiplier(0.50))
             );
             eprintln!(
-                "  90% chance by: {}",
-                pretty(expected_time * percentile_multiplier(0.90))
+                "  90% chance by: {time}",
+                time = pretty(expected_time * percentile_multiplier(0.90))
             );
             eprintln!(
-                "  99% chance by: {}",
-                pretty(expected_time * percentile_multiplier(0.99))
+                "  99% chance by: {time}",
+                time = pretty(expected_time * percentile_multiplier(0.99))
             );
-            eprintln!("  Expected time: {}", pretty(expected_time));
+            eprintln!(
+                "  Expected time: {expected_time}",
+                expected_time = pretty(expected_time)
+            );
             eprintln!();
 
             let now = std::time::Instant::now();
@@ -284,7 +344,10 @@ fn main() -> anyhow::Result<()> {
             });
             match found_preimage {
                 Some((preimage_hex, derived_key_hex)) => {
-                    eprintln!("Found key in {}", pretty(now.elapsed().as_secs_f64()));
+                    eprintln!(
+                        "Found key in {elapsed}",
+                        elapsed = pretty(now.elapsed().as_secs_f64())
+                    );
                     write_file(&preimage_output, &preimage_hex)?;
                     if let Some(key_output) = key_output {
                         write_file(&key_output, &derived_key_hex)?;
@@ -325,8 +388,8 @@ fn main() -> anyhow::Result<()> {
             threads,
             kdf_params,
         } => {
-            ensure!(iterations > 0, "iterations must be > 0");
-            ensure!(threads > 0, "threads must be > 0");
+            validate_iterations(iterations)?;
+            validate_threads(threads)?;
             eprintln!("Using {threads} threads for benchmark");
 
             // Build a dedicated rayon pool with the requested number of threads
@@ -344,7 +407,9 @@ fn main() -> anyhow::Result<()> {
             );
             let start = std::time::Instant::now();
 
-            let total_iterations = iterations * threads;
+            let total_iterations = iterations.checked_mul(threads).ok_or_else(|| {
+                anyhow::anyhow!("Overflow: {iterations} iterations * {threads} threads")
+            })?;
             // Execute the benchmark in parallel using the thread pool
             pool.install(|| {
                 (0..total_iterations).into_par_iter().for_each(|_i| {
@@ -494,7 +559,7 @@ fn read_file(path: &std::path::Path) -> anyhow::Result<String> {
         Ok(buffer)
     } else {
         std::fs::read_to_string(path)
-            .with_context(|| format!("failed to read file {}", path.display()))
+            .with_context(|| format!("failed to read file {path}", path = path.display()))
     }
 }
 
@@ -503,31 +568,55 @@ fn write_file(path: &std::path::Path, content: &str) -> anyhow::Result<()> {
         Ok(std::io::stdout().write_all(content.as_bytes())?)
     } else {
         std::fs::write(path, content)
-            .with_context(|| format!("failed to write file {}", path.display()))
+            .with_context(|| format!("failed to write file {path}", path = path.display()))
     }
 }
 
 fn parse_salt(salt: &str) -> anyhow::Result<[u8; SALT_SIZE]> {
+    let salt = salt.trim();
+    ensure!(!salt.is_empty(), "salt cannot be empty");
     let result = hex::decode(salt)
         .context("salt isn't valid hex")?
         .try_into()
-        .map_err(|k| anyhow::anyhow!("salt doesn't fit in [u8; SALT_SIZE]: {k:?}"))?;
+        .map_err(|v: Vec<u8>| {
+            anyhow::anyhow!(
+                "salt must be exactly {expected} bytes (got {actual} bytes)",
+                expected = SALT_SIZE,
+                actual = v.len()
+            )
+        })?;
     Ok(result)
 }
 
 fn parse_preimage(preimage: &str) -> anyhow::Result<[u8; PREIMAGE_SIZE]> {
+    let preimage = preimage.trim();
+    ensure!(!preimage.is_empty(), "preimage cannot be empty");
     let preimage = hex::decode(preimage)
         .context("preimage isn't valid hex")?
         .try_into()
-        .map_err(|k| anyhow::anyhow!("preimage doesn't fit in [u8; PREIMAGE_SIZE]: {k:?}"))?;
+        .map_err(|v: Vec<u8>| {
+            anyhow::anyhow!(
+                "preimage must be exactly {expected} bytes (got {actual} bytes)",
+                expected = PREIMAGE_SIZE,
+                actual = v.len()
+            )
+        })?;
     Ok(preimage)
 }
 
 fn parse_key(key: &str) -> anyhow::Result<[u8; KEY_SIZE]> {
+    let key = key.trim();
+    ensure!(!key.is_empty(), "key cannot be empty");
     let key = hex::decode(key)
         .context("key isn't valid hex")?
         .try_into()
-        .map_err(|k| anyhow::anyhow!("key doesn't fit in [u8; KEY_SIZE]: {k:?}"))?;
+        .map_err(|v: Vec<u8>| {
+            anyhow::anyhow!(
+                "key must be exactly {expected} bytes (got {actual} bytes)",
+                expected = KEY_SIZE,
+                actual = v.len()
+            )
+        })?;
     Ok(key)
 }
 
@@ -535,7 +624,7 @@ fn parse_key(key: &str) -> anyhow::Result<[u8; KEY_SIZE]> {
 ///   ((start + i) mod 2^(n-1))  with the MSB forced to 1.
 #[inline]
 fn index_to_preimage(i: u64, start: u64, n_bits: u8) -> [u8; 8] {
-    debug_assert!((1..=63).contains(&n_bits));
+    assert!((1..=63).contains(&n_bits), "n must be between 1 and 63");
     let hi_mask = 1u64 << (n_bits - 1);
     let space = hi_mask; // 2^(n-1)
     let value = ((start + i) & (space - 1)) | hi_mask;
@@ -655,10 +744,10 @@ fn pretty(secs: f64) -> String {
 
     // render the next smaller unit, rounded to the nearest integer
     let second = match unit {
-        "y" => format!(" {:.0}d", (rest / D).round()),
-        "d" => format!(" {:.0}h", (rest / H).round()),
-        "h" => format!(" {:.0}min", (rest / MIN).round()),
-        "min" => format!(" {:.0}s", rest.round()),
+        "y" => format!(" {days:.0}d", days = (rest / D).round()),
+        "d" => format!(" {hours:.0}h", hours = (rest / H).round()),
+        "h" => format!(" {minutes:.0}min", minutes = (rest / MIN).round()),
+        "min" => format!(" {seconds:.0}s", seconds = rest.round()),
         _ => String::new(),
     };
 

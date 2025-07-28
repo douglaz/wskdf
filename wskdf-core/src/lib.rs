@@ -11,7 +11,7 @@ pub fn gen_rand_preimage(n_bits: u8) -> anyhow::Result<[u8; PREIMAGE_SIZE]> {
 
 #[inline]
 pub fn core_gen_rand_preimage(n_bits: u8, rng: &mut rand::rngs::ThreadRng) -> [u8; PREIMAGE_SIZE] {
-    debug_assert!((1..=63).contains(&n_bits), "n must be between 1 and 63");
+    assert!((1..=63).contains(&n_bits), "n must be between 1 and 63");
     let low = 1u64 << (n_bits - 1); // inclusive lower bound
     let high = 1u64 << n_bits; // exclusive upper bound
     let result = rand::Rng::random_range(rng, low..high); // uniform in [low, high)
@@ -26,7 +26,9 @@ fn libsodium_argon2id_derive_key(
     mem_limit_kbytes: usize,
 ) -> anyhow::Result<[u8; KEY_SIZE]> {
     let mut key = [0u8; KEY_SIZE];
-    let mem_limit_bytes = mem_limit_kbytes * 1024;
+    let mem_limit_bytes = mem_limit_kbytes
+        .checked_mul(1024)
+        .ok_or_else(|| anyhow::anyhow!("Memory limit overflow: {mem_limit_kbytes} KB * 1024"))?;
     alkali::hash::pbkdf::argon2id::derive_key(
         password,
         salt,
