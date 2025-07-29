@@ -14,9 +14,9 @@ KEYFILE_SIZE="32"
 # There is no good reason to use a low value here
 FIRST_PREIMAGE_NBITS=63
 # Calculate ops based on input days parameter
-# if OPS=10 takes 60s, then for N days:
-# N * 24 * 3600 / 60 * 10 = N * 14400
-MONTHS_LONG_OPS=$((DAYS * 14400))
+# if OPS=10 takes 30s, then for N days:
+# N * 24 * 3600 / 30 * 10 = N * 28800
+MONTHS_LONG_OPS=$((DAYS * 28800))
 # This is 8GiB
 LARGE_MEM_LIMIT_KBYTES=8388608
 
