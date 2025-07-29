@@ -547,7 +547,7 @@ fn main() -> anyhow::Result<()> {
 
 fn ensure_file_does_not_exists(path: &std::path::Path, message: &str) -> anyhow::Result<()> {
     if path.as_os_str() != "-" {
-        ensure!(!path.exists(), "{message}");
+        ensure!(!path.exists(), "{path}: {message}", path = path.display());
     }
     Ok(())
 }
