@@ -272,19 +272,19 @@ Explanation:
 
 ## Computational Cost Estimation for Brute-Force Recovery
 
-### Coercion-Resistant Vault Example (24-bit second preimage)
+### Coercion-Resistant Vault Example (26-bit second preimage)
 
 The `scripts/complex-scheme.sh` example uses these parameters for the second layer:
-- **Bit length**: 24 bits (16,777,216 possible values, but only 8,388,608 candidates since MSB=1)
+- **Bit length**: 26 bits (67,108,864 possible values, but only 33,554,432 candidates since MSB=1)
 - **Argon2id parameters**: 7 iterations, 4GB memory
 - **Expected derivation time**: ~30 seconds per attempt (on typical hardware)
 
 ### Time Requirements
 
-From the benchmark table above, brute-forcing a 24-bit preimage requires:
-- **16 threads** (desktop): 182 days worst-case
-- **128 threads** (single large instance): ~22.7 days expected
-- **2048 threads** (distributed cluster): 1.4 days expected, 6.5 days at 99th percentile
+From the benchmark table above, brute-forcing a 26-bit preimage requires:
+- **16 threads** (desktop): 1 year 363 days worst-case, 364 days expected
+- **128 threads** (single large instance): ~91 days expected
+- **2048 threads** (distributed cluster): 5.7 days expected, 26 days at 99th percentile
 
 ### Cloud Computing Cost Analysis
 
@@ -295,22 +295,22 @@ For memory-hard operations requiring 4GB per thread:
 - Instance type: `r6i.32xlarge` (128 vCPUs, 1024 GB RAM)
 - Can run 128 parallel threads (1 per vCPU, each using 4GB RAM)
 - Cost: ~$8.06/hour
-- Time needed: ~22.7 days (with 128 threads)
-- **Total cost: ~$4,390**
+- Time needed: ~91 days (with 128 threads)
+- **Total cost: ~$17,600**
 
 **Option 2: Compute-Optimized Cluster**
 - Instance type: `c6i.4xlarge` (16 vCPUs, 32 GB RAM) 
 - Can run 8 parallel threads (limited by RAM: 32GB/4GB = 8)
 - Cost: ~$0.68/hour per instance
 - Need 256 instances for 2048 threads
-- Time needed: ~1.4 days expected
-- **Total cost: ~$5,850** (expected case)
-- **Total cost: ~$27,000** (99th percentile, 6.5 days)
+- Time needed: ~5.7 days expected
+- **Total cost: ~$23,800** (expected case)
+- **Total cost: ~$108,500** (99th percentile, 26 days)
 
 **Option 3: Spot Instances**
 - Using spot pricing can reduce costs by 60-90%
 - Less reliable, may be interrupted
-- **Estimated cost: $1,000-$10,000** depending on availability
+- **Estimated cost: $4,000-$40,000** depending on availability
 
 #### Other Cloud Providers
 
@@ -318,14 +318,14 @@ For memory-hard operations requiring 4GB per thread:
 - `n2-highmem-128` (128 vCPUs, 864 GB RAM)
 - Can run 128 parallel threads (1 per vCPU)
 - Cost: ~$6.74/hour
-- Time needed: ~22.7 days
-- **Total cost: ~$3,670**
+- Time needed: ~91 days
+- **Total cost: ~$14,700**
 
 **Local Hardware Investment**
 - 64-core AMD Threadripper: ~$4,000
 - 256GB RAM: ~$1,000
 - Can run 64 threads continuously
-- Time: ~45 days
+- Time: ~182 days (6 months)
 - **One-time cost: ~$5,000** (reusable hardware)
 
 ### Cost Factors to Consider
@@ -334,13 +334,13 @@ For memory-hard operations requiring 4GB per thread:
 2. **Memory Requirements**: Each thread needs 4GB RAM, which can limit thread count on lower-memory instances
 3. **Spot vs On-Demand**: Spot instances can reduce costs by 60-90% but may be interrupted
 4. **Coordination Overhead**: Managing 2048 threads across 256+ machines requires significant orchestration
-5. **Electricity Costs**: For local hardware, add ~$200-500 for 45 days of operation
+5. **Electricity Costs**: For local hardware, add ~$800-2,000 for 182 days of operation
 
 ### Conclusion
 
-Realistic cost estimates for brute-forcing a 24-bit preimage:
-- **Budget approach**: $1,000-$5,000 using spot instances or local hardware
-- **Fast approach**: $6,000-$30,000 for on-demand cloud computing
+Realistic cost estimates for brute-forcing a 26-bit preimage:
+- **Budget approach**: $5,000-$20,000 using local hardware or spot instances
+- **Fast approach**: $24,000-$110,000 for on-demand cloud computing
 - **Worst case**: Higher costs if extremely unlucky (99.9th percentile)
 
 These costs make brute-force recovery feasible for high-value assets while remaining prohibitively expensive for casual attackers. The actual cost depends heavily on:
