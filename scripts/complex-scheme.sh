@@ -17,12 +17,12 @@ FIRST_PREIMAGE_NBITS=63
 # if OPS=10 takes 60s, then for N days:
 # N * 24 * 3600 / 60 * 10 = N * 14400
 MONTHS_LONG_OPS=$((DAYS * 14400))
-# This is 16GB
-LARGE_MEM_LIMIT_KBYTES=16777216
+# This is 8GiB
+LARGE_MEM_LIMIT_KBYTES=8388608
 
 # The second preimage is easy to derive but requires money/time to brute-force
 SECONDS_LONG_OPS=7
-# This is 4GB
+# This is 4GiB
 SMALL_MEM_LIMIT_KBYTES=4194304
 
 if [[ ! -f "$SALT" ]]; then
