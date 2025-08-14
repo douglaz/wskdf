@@ -56,6 +56,55 @@ $ nix develop
 $ cargo build --release -F alkali
 ```
 
+## Development
+
+This project uses Git hooks for maintaining code quality. When you enter the development environment, hooks are automatically configured:
+
+```bash
+$ nix develop
+📎 Setting up Git hooks for code quality checks...
+✅ Git hooks configured automatically!
+   • pre-commit: Checks code formatting
+   • pre-push: Runs formatting and clippy checks
+```
+
+### Git Hooks
+
+The project includes two Git hooks that help maintain code quality:
+
+1. **pre-commit**: Ensures code is properly formatted before committing
+2. **pre-push**: Runs both formatting and clippy checks before pushing
+
+These hooks are automatically configured when you enter the nix development shell. To manually configure them:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+To disable the hooks temporarily:
+
+```bash
+git config --unset core.hooksPath
+```
+
+### Running Checks Manually
+
+You can run the quality checks manually at any time:
+
+```bash
+# Check formatting
+nix develop -c cargo fmt --check
+
+# Fix formatting
+nix develop -c cargo fmt
+
+# Run clippy
+nix develop -c cargo clippy --workspace -- -D warnings
+
+# Run all checks
+nix develop -c cargo fmt --check && nix develop -c cargo clippy --workspace -- -D warnings
+```
+
 ## CLI quick‑start
 
 Note: salt is a hex encoded string of 16 bytes. It's good enough to generate it once and reuse for multiple keys. You can generate with:
