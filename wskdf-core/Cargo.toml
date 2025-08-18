@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 alkali = { version = "0.3", optional = true }
 anyhow = { workspace = true }
 rand = { workspace = true }
-rust-argon2 = { version = "2", optional = true }
+rust-argon2 = { version = "3", optional = true }
 
 [dev-dependencies]
 hex = { workspace = true }
