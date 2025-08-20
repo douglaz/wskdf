@@ -28,6 +28,7 @@
             pkg-config
             pkgsStatic.stdenv.cc
             gh
+            cargo-edit
           ];
 
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER = "${pkgs.pkgsStatic.stdenv.cc}/bin/${pkgs.pkgsStatic.stdenv.cc.targetPrefix}cc";
