@@ -8,7 +8,7 @@ edition = "2024"
 
 [workspace.dependencies]
 anyhow = { version = "1" }
-rand = "0.9"
+rand = "0.10"
 hex = "0.4"
 
 [profile.dev.package.alkali]
