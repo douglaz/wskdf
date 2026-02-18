@@ -316,7 +316,7 @@ fn main() -> anyhow::Result<()> {
             let now = std::time::Instant::now();
             let start = {
                 let mut rng = rand::rngs::ThreadRng::default();
-                rand::Rng::random_range(&mut rng, 0..space)
+                rand::RngExt::random_range(&mut rng, 0..space)
             };
             let found_preimage = pool.install(|| {
                 (0..space).into_par_iter().find_map_any(|idx| {
@@ -537,7 +537,7 @@ fn main() -> anyhow::Result<()> {
         Commands::GenerateSalt { output } => {
             ensure_file_does_not_exists(&output, "output file already exists")?;
             let mut rng = rand::rngs::ThreadRng::default();
-            let salt: [u8; SALT_SIZE] = rand::Rng::random(&mut rng);
+            let salt: [u8; SALT_SIZE] = rand::RngExt::random(&mut rng);
             let salt_hex = hex::encode(salt);
             write_file(&output, &salt_hex)?;
         }
