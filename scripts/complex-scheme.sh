@@ -25,6 +25,11 @@ SECONDS_LONG_OPS=7
 # This is 4GiB
 SMALL_MEM_LIMIT_KBYTES=4194304
 
+if ! command -v gpg &>/dev/null; then
+    echo "gpg is required but not found"
+    exit 1
+fi
+
 if [[ ! -f "$SALT" ]]; then
     echo "Salt file not found"
     exit 1
