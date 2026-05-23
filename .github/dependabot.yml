@@ -19,6 +19,17 @@ updates:
     labels:
       - "dependencies"
       - "rust"
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+      minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
